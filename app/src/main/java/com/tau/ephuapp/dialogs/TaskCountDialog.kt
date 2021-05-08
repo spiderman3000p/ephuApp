@@ -309,8 +309,8 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             true
         }
         binding?.doneBtn?.setOnClickListener {
-            //showAlert(requireContext(), getString(R.string.confirmation), getString(R.string.save_all_counts_confirm_msg), this::saveAllCounts)
-            saveAllCounts()
+            showAlert(requireContext(), getString(R.string.confirmation), getString(R.string.save_all_counts_confirm_msg), this::saveAllCounts)
+            //saveAllCounts()
         }
         /*binding?.emptySw?.setOnCheckedChangeListener { buttonView, isChecked ->
             Log.i(TAG, "on changed empty slide toogle. is checked: $isChecked")
@@ -651,12 +651,15 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
     }
 
     private fun saveAllCounts(){
+        Log.i(TAG, "saving all counts...")
         try {
             doAsync {
                 val newCountsToSave = db.itemCountDao()
                     .getAllPendingToUploadByDevice(Utilities.getAndroidId(requireContext()))
+                Log.i(TAG, "Nuevos conteos por subir y crear: $newCountsToSave")
                 val countsToUpdate = db.itemCountDao()
                     .getAllPendingToUpdateByDevice(Utilities.getAndroidId(requireContext()))
+                Log.i(TAG, "Conteos por subir y actualizar: $newCountsToSave")
                 if (!newCountsToSave.isNullOrEmpty()) {
                     viewModel.repository.setIsSavingCounts(true)
                     MyWorkerManagerService.enqueCountToUploadArrayWork(
