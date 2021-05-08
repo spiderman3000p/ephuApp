@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/prev_task"
+        android:icon="@drawable/ic_arrow_left___334_"
+        android:title="@string/previous_task"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/next_task"
+        android:icon="@drawable/ic_arrow_right___333_"
+        android:title="@string/next_task"
+        app:showAsAction="ifRoom" />
+</menu>

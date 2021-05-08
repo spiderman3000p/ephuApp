@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "338244065244",
+    "firebase_url": "https://transgestion-1533677769825.firebaseio.com",
+    "project_id": "transgestion-1533677769825",
+    "storage_bucket": "transgestion-1533677769825.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:338244065244:android:ab130e7b5c22a8dbc8a119",
+        "android_client_info": {
+          "package_name": "com.tau.ephuapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "338244065244-0c3qbkq8bd941j587c08oe13of5n14vq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCTGdwmH1wA4FSzvlS8n2VSwDOS1PDTrI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "338244065244-0c3qbkq8bd941j587c08oe13of5n14vq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
