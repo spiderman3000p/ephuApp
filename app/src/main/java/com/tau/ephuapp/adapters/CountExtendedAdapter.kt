@@ -1,8 +1,6 @@
 package com.tau.ephuapp.adapters
 
-import android.content.ContentProvider
 import android.content.Context
-import android.content.res.ColorStateList
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -13,62 +11,62 @@ import androidx.core.content.ContextCompat.getDrawable
 import androidx.recyclerview.widget.RecyclerView
 import com.tau.ephuapp.R
 import com.tau.ephuapp.classes.Utilities
-import com.tau.ephuapp.databinding.CountCardItemBinding
+import com.tau.ephuapp.databinding.CountExtendedCardItemBinding
 import com.tau.ephuapp.models.ItemCount
 import kotlin.collections.ArrayList
 
-class CountAdapter(
+class CountExtendedAdapter(
     _list: ArrayList<ItemCount>,
     _context: Context,
     _onDeleteCallback: ((ItemCount, Int) -> Unit)? = null,
     _onEditCallback: ((ItemCount, Int) -> Unit)? = null
-) : RecyclerView.Adapter<CountAdapter.TaskHolder>() {
+) : RecyclerView.Adapter<CountExtendedAdapter.TaskHolder>() {
     private var list: ArrayList<ItemCount> = _list
     private var context: Context = _context
     private var onDeleteCallback: ((ItemCount, Int) -> Unit)? = _onDeleteCallback
     private var onEditCallback: ((ItemCount, Int) -> Unit)? = _onEditCallback
-    //var isEditing = -1
     val TAG = "COUNT_ADAPTER"
 
-    class TaskHolder(val binding: CountCardItemBinding, val onDeleteCallback: ((ItemCount, Int) -> Unit)? = null,
+    class TaskHolder(val binding: CountExtendedCardItemBinding, val onDeleteCallback: ((ItemCount, Int) -> Unit)? = null,
                      onEditCallback: ((ItemCount, Int) -> Unit)? = null): RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskHolder {
-        val binding = CountCardItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        val binding = CountExtendedCardItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return TaskHolder(binding, onDeleteCallback, onEditCallback)
     }
 
     override fun onBindViewHolder(holder: TaskHolder, position: Int) {
         with(holder){
             with(list[position]){
-                Log.i(TAG, "onBindViewHolder count: $this")
-                if(editing){
-                    Log.i(TAG, "el conteo $id en la posicion $position esta siendo editado")
-                    binding.deleteBtn.visibility = View.GONE
-                    binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.editing_count))
-                } else {
-                    if(!recount) {
-                        binding.deleteBtn.visibility = View.VISIBLE
-                    }
-                    if(uploaded && dirty) {
+
+                if(uploaded) {
+                    if(dirty) {
                         Log.i(TAG, "el conteo $id en la posicion $position ha sido modificado")
-                        binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.design_default_color_secondary))
+                        binding.itemCard.setCardBackgroundColor(
+                            ContextCompat.getColor(
+                                context,
+                                R.color.design_default_color_secondary
+                            )
+                        )
                     } else {
-                        Log.i(TAG, "el conteo $id en la posicion $position esta normal")
-                        binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.white))
+                        /*binding.itemCard.setCardBackgroundColor(
+                            ContextCompat.getColor(
+                                context,
+                                R.color.cp_state
+                            )
+                        )*/
                     }
+                } else {
+                    Log.i(TAG, "el conteo $id en la posicion $position esta normal")
+                    binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.white))
                 }
+                binding.taskIdTv.text = taskId.toString()
                 binding.skuTv.text = sku ?: ""
                 binding.descriptionTv.text = description ?: ""
                 binding.quantityTv.text = (quantity).toString()
-                if(recount){
-                    binding.deleteBtn.visibility = View.GONE
-                }
-                if(hasError == true || recount || dirty){
-                    if(hasError != true && (recount || dirty || uploaded)){
-                        Log.i(TAG, "el conteo ${id} no tiene error")
+                if(hasError == true || (recount && dirty)){
+                    if(hasError == false && ((recount && dirty) || uploaded)){
                         if (uploaded) {
-                            Log.i(TAG, "el conteo ${id} ha sido subido")
                             binding.statusBtn.setImageDrawable(
                                 getDrawable(
                                     context,
@@ -76,7 +74,6 @@ class CountAdapter(
                                 )
                             )
                             if(recount){
-                                Log.i(TAG, "el conteo ${id} es un reconteo")
                                 binding.statusBtn.setOnClickListener {
                                     Utilities.showAlert(
                                         context,
@@ -85,7 +82,6 @@ class CountAdapter(
                                     )
                                 }
                             } else {
-                                Log.i(TAG, "el conteo ${id} no es un reconteo")
                                 binding.statusBtn.setOnClickListener {
                                     Utilities.showAlert(
                                         context,
@@ -94,8 +90,7 @@ class CountAdapter(
                                     )
                                 }
                             }
-                        } else if(recount){
-                            Log.i(TAG, "el conteo ${id} no ha sido subido y es un reconteo modificado")
+                        } else if(recount && dirty){
                             binding.statusBtn.setImageDrawable(
                                 getDrawable(
                                     context,
@@ -109,12 +104,11 @@ class CountAdapter(
                                     context.getString(R.string.recount_already_made_msg)
                                 )
                             }
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                                binding.statusBtn.foregroundTintList = getColorStateList(context, R.color.cp_state)
-                            }
+                        }
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                            binding.statusBtn.foregroundTintList = getColorStateList(context, R.color.cp_state)
                         }
                     } else if (hasError == true){
-                        Log.i(TAG, "el conteo ${id} tiene un error")
                         binding.statusBtn.setImageDrawable(getDrawable(context, R.drawable.ic_baseline_cancel_24))
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                             binding.statusBtn.foregroundTintList = getColorStateList(context, R.color.pe_cancelled)
@@ -126,37 +120,6 @@ class CountAdapter(
                     binding.statusBtn.visibility = View.VISIBLE
                 } else {
                     binding.statusBtn.visibility = View.GONE
-                }
-                binding.statusBtn.setOnClickListener {
-                    Utilities.showAlert(context, context.getString(R.string.error), errorMessage ?: context.getString(R.string.unknown_error))
-                }
-                binding.deleteBtn.setOnClickListener {
-                    if (!editing) {
-                        Utilities.showAlert(
-                                context,
-                                context.getString(R.string.confirmation),
-                                context.getString(R.string.delete_count_confirm_msg),
-                                {
-                                    onDeleteCallback?.let {
-                                        it(this, position)
-                                    }
-                                }
-                        )
-                    } else {
-                        Utilities.showToast(context, context.getString(R.string.you_are_editing_error))
-                    }
-                }
-                binding.itemCard.setOnClickListener {
-                    onEditCallback?.let{
-                        Log.i(TAG, "click realizado en item en la posicion $position: ${list[position]}")
-                        if(!editing && (!recount || (recount && !uploaded))){
-                            //isEditing = position
-                            editing = true
-                            //notifyItemChanged(position)
-                            //notifyDataSetChanged()
-                            it(this, position)
-                        }
-                    }
                 }
             }
         }

@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteCantOpenDatabaseException
 import android.database.sqlite.SQLiteDatabaseLockedException
 import android.os.Bundle
 import android.os.Environment
+import android.os.Environment.DIRECTORY_DOWNLOADS
 import android.text.format.DateUtils
 import android.util.Log
 import android.view.LayoutInflater
@@ -14,40 +15,41 @@ import android.widget.Toast
 import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.kbj.androxlsxparser.mxlsxparser.StreamingReader
 import com.tau.ephuapp.R
-import com.tau.ephuapp.activities.main.ui.tasks.TasksViewModel
+import com.tau.ephuapp.activities.main.MainActivityViewModel
 import com.tau.ephuapp.classes.Utilities
 import com.tau.ephuapp.database.AppDatabase
-import com.tau.ephuapp.databinding.FragmentSyncBinding
 import com.tau.ephuapp.databinding.FragmentSyncMasterBinding
 import com.tau.ephuapp.models.HistoryType
+import org.apache.poi.ss.usermodel.Workbook
 import org.jetbrains.anko.defaultSharedPreferences
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
 import org.joda.time.DateTime
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.IOException
+import java.io.*
 import java.text.DateFormat
 
 class SyncMasterFragment : Fragment() {
     private val TAG = "SYNC_MASTER_FRAGMENT"
-    private lateinit var viewModel: TasksViewModel
-    private var _binding: FragmentSyncBinding? = null
+    private lateinit var viewModel: MainActivityViewModel
+    private var _binding: FragmentSyncMasterBinding? = null
     private val binding get() = _binding!!
     private lateinit var db: AppDatabase
+    private var isSyncingDevice = false
     private var isSyncingItems = false
     private var isSyncingTasks = false
     private var isSyncingAll = false
+    private var deviceId: String = ""
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        _binding = FragmentSyncBinding.inflate(inflater, container, false)
-        val _viewModel: TasksViewModel by activityViewModels()
+        _binding = FragmentSyncMasterBinding.inflate(inflater, container, false)
+        val _viewModel: MainActivityViewModel by activityViewModels()
         viewModel = _viewModel
+        deviceId = Utilities.getAndroidId(requireContext())
         try {
             db = AppDatabase.getDatabase(requireContext())
         } catch (ex: SQLiteDatabaseLockedException) {
@@ -62,7 +64,14 @@ class SyncMasterFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.deviceAndroidIdTv.text = deviceId
         refreshUi()
+        viewModel.device.observe(viewLifecycleOwner, {
+            isSyncingDevice = false
+            binding.syncDeviceBtn.isEnabled = true
+            binding.deviceOwnerTv.text = it?.ownerName ?: getString(R.string.unknown)
+            refreshUi()
+        })
         viewModel.tasksList.observe(viewLifecycleOwner, { _ ->
             isSyncingTasks = false
             binding.syncTasksBtn.isEnabled = true
@@ -81,12 +90,19 @@ class SyncMasterFragment : Fragment() {
         binding.syncItemsBtn.setOnClickListener {
             syncItems()
         }
+        binding.syncDeviceBtn.setOnClickListener {
+            syncDevice()
+        }
         binding.bdExportBtn.setOnClickListener{
-            exportDB()
+            exportDatabase()
+        }
+        binding.runTestBtn.setOnClickListener{
+            runTest()
         }
         binding.syncAllBtn.setOnClickListener {
             isSyncingAll = true
             binding.syncAllBtn.isEnabled = false
+            syncDevice()
             syncItems()
             syncTask()
         }
@@ -119,21 +135,42 @@ class SyncMasterFragment : Fragment() {
         viewModel.repository.fetchTasksList(requireContext(), true)
     }
 
+    private fun syncDevice(){
+        isSyncingDevice = true
+        binding.syncDeviceBtn.isEnabled = false
+        binding.progressBarSync.visibility = View.VISIBLE
+        viewModel.repository.fetchOwnerData(requireContext(), true)
+    }
+
     private fun refreshUi(){
         doAsync {
+            val device = db.deviceDao().getByDevice(deviceId)
+            val deviceLastSync = db.fetchedHistoryDao().getByTag(HistoryType.DEVICES.toString())
             val totalItems = db.itemDao().countAll()
             val itemsLastSync = db.fetchedHistoryDao().getByTag(HistoryType.ITEMS.toString())
             val totalTasks = db.tasksDao().countAllByDevice(Utilities.getAndroidId(requireContext()))
             val tasksLastSync = db.fetchedHistoryDao().getByTag(HistoryType.TASKS.toString())
             val bdLastExported = activity?.defaultSharedPreferences?.getString("bdLastExported", null) ?: getString(R.string.never)
+            val lastUploadTest = activity?.defaultSharedPreferences?.getString("lastUploadTest", null) ?: getString(R.string.never)
+            val testPath = File(requireContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "test.xlsx").absolutePath
             uiThread {
-                if(isSyncingAll && (!isSyncingItems && !isSyncingTasks)){
+                if(isSyncingAll && (!isSyncingItems && !isSyncingTasks && !isSyncingDevice)){
                     isSyncingAll = false
                     binding.syncAllBtn.isEnabled = true
                 }
-                if(!isSyncingAll && !isSyncingTasks && !isSyncingItems) {
+                if(!isSyncingAll && !isSyncingTasks && !isSyncingItems && !isSyncingDevice) {
                     binding.progressBarSync.visibility = View.INVISIBLE
                 }
+                binding.deviceOwnerTv.text = device?.ownerName ?: getString(R.string.unknown)
+                binding.deviceLastSyncTv.text = getString(
+                    R.string.last_synced_date, DateUtils.formatSameDayTime(
+                        deviceLastSync?.lastUpdate ?: 0,
+                        System.currentTimeMillis(),
+                        DateFormat.SHORT,
+                        DateFormat.SHORT
+                    )
+                )
+
                 binding.totalItemsTv.text = getString(R.string.last_synced_items, totalItems)
                 binding.itemLastSyncTv.text = getString(
                     R.string.last_synced_date, DateUtils.formatSameDayTime(
@@ -156,76 +193,65 @@ class SyncMasterFragment : Fragment() {
 
                 binding.bdLastExportTv.text = getString(R.string.last_exported, bdLastExported)
                 binding.bdPathTv.text = activity?.getDatabasePath("ephuapp_database")?.getAbsolutePath() ?: getString(R.string.unknown)
+
+                binding.lastTestTv.text = getString(R.string.last_runned, lastUploadTest)
+                binding.testPathTv.text =  testPath ?: getString(R.string.unknown)
             }
         }
     }
 
-    private fun exportDB(){
-        var path: String? = null
-        try {
-            path =
-                if (File("/data/data/com.tau.ephuapp/databases/ephuapp_database.db3").exists()) {
-                    "/data/data/com.tau.ephuapp/databases/ephuapp_database.db3"
-                } else if (File(
-                        activity?.getDatabasePath("ephuapp_database")?.getAbsolutePath() ?: ""
-                    ).exists()
-                ) {
-                    activity?.getDatabasePath("ephuapp_database")?.getAbsolutePath()
-                } else {
-                    null
+    fun exportDatabase(){
+        val sd = requireContext().getExternalFilesDir(DIRECTORY_DOWNLOADS)
+        if (sd?.canWrite() == true) {
+            val currentDBPath = AppDatabase.getDatabase(requireContext()).openHelper.writableDatabase.path
+            val backupDBPath = "ephu_database_backup.sqlite"//you can modify the file type you need to export
+            val currentDB = File(currentDBPath)
+            val backupDB = File(sd, backupDBPath)
+            if (currentDB.exists()) {
+                try {
+                    val src = FileInputStream(currentDB).channel
+                    val dst = FileOutputStream(backupDB).channel
+                    dst.transferFrom(src, 0, src.size())
+                    src.close()
+                    dst.close()
+                    activity?.defaultSharedPreferences?.edit {
+                        putString("bdLastExported", DateTime.now().toLocalDateTime().toString())
+                        commit()
+                    }
+                    refreshUi()
+                    Toast.makeText(requireContext(), getString(R.string.db_exported), Toast.LENGTH_LONG).show()
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                    Toast.makeText(requireContext(), getString(R.string.error_exporting_db), Toast.LENGTH_LONG).show()
                 }
-            if (path == null) {
-                Log.e(TAG, "No se encontro un path valido para la BD de la app")
-                Toast.makeText(
-                    requireContext(),
-                    "No se encontro la ubicacion de la BD",
-                    Toast.LENGTH_LONG
-                ).show()
             }
-        } catch (e: Exception){
-            e.printStackTrace()
-            Log.e(TAG, "Error al obtener el path de la BD de la app")
-            Toast.makeText(
-                requireContext(),
-                "Error al intentar obtener la ubicacion de la BD de la app",
-                Toast.LENGTH_LONG
-            ).show()
-            return
         }
-        val exportPath = Environment.getExternalStorageDirectory()
-        val file = File(exportPath, "ephuapp_database_dump.db")
-//        file.createNewFile()
-        Log.i(TAG, "Se copiara la BD desde: $path")
-        Log.i(TAG, "Se creara la copia de la BD en: $exportPath")
-        val f = File(path!!)
-        var fis: FileInputStream? = null
-        var fos: FileOutputStream? = null
-        try {
-            fis = FileInputStream(f)
-            fos = FileOutputStream(file)
-            while (true) {
-                val i: Int = fis.read()
-                if (i != -1) {
-                    fos.write(i)
-                } else {
-                    break
+    }
+
+    fun runTest(){
+        doAsync {
+            val sd = requireContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            val inputStream: InputStream = FileInputStream(File(sd, "test.xlsx"));
+            val workbook: Workbook = StreamingReader.builder()
+                .rowCacheSize(100) // number of rows to keep in memory (defaults to 10)
+                .bufferSize(4096) // buffer size to use when reading InputStream to file (defaults to 1024)
+                .open(requireContext(), inputStream) // InputStream or File for XLSX file (required)
+
+            for (i in 0..workbook.numberOfSheets) {
+                val sheet = workbook.getSheetAt(i)
+                uiThread {
+                    Log.i(TAG, "Hoja $i:${sheet.sheetName}")
                 }
-            }
-            fos.flush()
-            activity?.defaultSharedPreferences?.edit {
-                putString("bdLastExported", DateTime.now().toLocalDateTime().toString())
-            }
-            Toast.makeText(requireContext(), "DB dump OK", Toast.LENGTH_LONG).show()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(requireContext(), "DB dump ERROR", Toast.LENGTH_LONG).show()
-        } finally {
-            try {
-                fos?.close()
-                fis?.close()
-            } catch (ioe: IOException) {
-                ioe.printStackTrace()
-                Toast.makeText(requireContext(), "ERROR IO closing file stream", Toast.LENGTH_LONG).show()
+                for (r in sheet) {
+                    uiThread {
+                        Log.i(TAG, "Fila ${r.rowNum}")
+                    }
+                    for (c in r) {
+                        uiThread {
+                            Log.i(TAG, "Celda ${c.columnIndex}:${c.stringCellValue}")
+                        }
+                    }
+                }
             }
         }
     }

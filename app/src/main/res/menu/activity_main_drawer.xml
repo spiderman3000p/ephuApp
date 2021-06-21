@@ -5,7 +5,7 @@
 
     <group android:checkableBehavior="single">
         <item
-            android:id="@+id/nav_tasks"
+            android:id="@+id/nav_inventory_tasks"
             android:icon="@drawable/ic_baseline_playlist_add_check_24"
             android:title="@string/menu_tasks" />
         <item
@@ -13,6 +13,10 @@
             android:icon="@android:drawable/ic_secure"
             android:title="@string/menu_cert_tasks"
             android:visible="false" />
+        <item
+            android:id="@+id/nav_counts"
+            android:icon="@drawable/ic_baseline_format_list_numbered_24"
+            android:title="@string/menu_counts" />
         <item
             android:id="@+id/nav_sync_master"
             android:icon="@android:drawable/ic_popup_sync"

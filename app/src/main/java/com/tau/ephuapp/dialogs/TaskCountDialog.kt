@@ -4,32 +4,31 @@ import android.app.Activity.RESULT_OK
 import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.database.sqlite.SQLiteAccessPermException
 import android.database.sqlite.SQLiteCantOpenDatabaseException
 import android.database.sqlite.SQLiteDatabaseLockedException
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
+import android.text.InputType
 import android.text.TextWatcher
-import android.text.format.DateUtils
 import android.util.Log
 import android.view.*
 import android.view.View.OnTouchListener
 import android.view.inputmethod.EditorInfo
-import android.widget.CompoundButton
-import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getColor
+import androidx.core.content.ContextCompat.getDrawable
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.work.WorkInfo
-import androidx.work.hasKeyWithValueOfType
+import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.tau.ephuapp.R
 import com.tau.ephuapp.activities.BarcodeScannerActivity
-import com.tau.ephuapp.activities.main.ui.tasks.TasksViewModel
+import com.tau.ephuapp.activities.main.MainActivityViewModel
 import com.tau.ephuapp.adapters.CountAdapter
 import com.tau.ephuapp.classes.Constants
 import com.tau.ephuapp.classes.Utilities
@@ -44,29 +43,34 @@ import org.jetbrains.anko.uiThread
 import org.joda.time.DateTime
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.random.Random
 
 
 class TaskCountDialog(var task: Task?) : DialogFragment() {
-    private val isEmptyLocations = mutableListOf<Int>()
+    //private val isEmptyLocations = mutableListOf<Int>()
     private var isEditing: Int = -1
     private var _binding: FragmentTaskCountBinding? = null
     private val TAG = "TASK_COUNT_DIALOG"
     private val BARCODE_SCANNER = 99
+    private val BARCODE_SCANNER_LOT = 100
+    private val BARCODE_SCANNER_LPN = 101
     // This property is only valid between onCreateView and
     // onDestroyView.
     private val binding get() = _binding
-    private lateinit var viewModel: TasksViewModel
+    private lateinit var viewModel: MainActivityViewModel
     private val taskLocations = arrayListOf<Location>()
     private val currentLocationCounts = arrayListOf<ItemCount>()
+    //private val currentLocationRecounts: Any = arrayListOf<ItemRecount>()
     private var currentLocationPosition: Int = 0
     private var totalPendingCounts = 0
+    private var pendingToUpdate: Int = 0
     private var totalCounts = 0
     private var mAdapter: CountAdapter? = null
     private lateinit var db: AppDatabase
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(DialogFragment.STYLE_NORMAL, R.style.AppTheme_FullScreenDialog)
-        val _viewModel: TasksViewModel by activityViewModels()
+        val _viewModel: MainActivityViewModel by activityViewModels()
         viewModel = _viewModel
         try {
             db = AppDatabase.getDatabase(requireContext())
@@ -252,14 +256,15 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             }
         }
         binding?.saveBtn?.setOnClickListener {
+            try{
             val item = viewModel.currentItem.value
             val location = viewModel.currentLocation.value
-            val quantity = if(binding?.quantityEt?.text?.isNotEmpty() == true) {
-                binding?.quantityEt?.text?.toString()?.toInt() ?: 0
-            } else {
-                0
+            val quantity: Float = when {
+                binding?.quantityEt?.text?.isNotEmpty() == true -> binding?.quantityEt?.text?.toString()
+                    ?.toFloat() ?: 0f
+                else -> 0f
             }
-            if(item != null && location != null && quantity > 0 && hasValidParams()){
+            if(item != null && location != null && quantity >= 0f && hasValidParams()){
                 if (isEditing == -1) {
                     showAlert(
                             requireContext(), getString(R.string.confirmation), getString(
@@ -276,6 +281,10 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                 }
             } else {
                 showToast(requireContext(), getString(R.string.invalid_item_count))
+            }
+            } catch (e: Exception){
+                e.printStackTrace()
+                Log.e(TAG, "error al intentar guardar conteo", e)
             }
         }
         binding?.skuEt?.setOnEditorActionListener { v, actionId, event ->
@@ -300,6 +309,34 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             }
             false
         })
+        binding?.lotEt?.setOnTouchListener(OnTouchListener { v, event ->
+            val DRAWABLE_LEFT = 0
+            val DRAWABLE_TOP = 1
+            val DRAWABLE_RIGHT = 2
+            val DRAWABLE_BOTTOM = 3
+            if (event.action == MotionEvent.ACTION_UP) {
+                if (event.rawX >= (binding?.lotEt?.getRight() ?: 0) - (binding?.lotEt?.getCompoundDrawables()?.get(DRAWABLE_RIGHT)?.bounds?.width() ?: 0)) {
+                    startActivityForResult(Intent(requireContext(), BarcodeScannerActivity::class.java), BARCODE_SCANNER_LOT)
+                    //ZxingOrient(this).initiateScan()
+                    return@OnTouchListener true
+                }
+            }
+            false
+        })
+        binding?.lpnEt?.setOnTouchListener(OnTouchListener { v, event ->
+            val DRAWABLE_LEFT = 0
+            val DRAWABLE_TOP = 1
+            val DRAWABLE_RIGHT = 2
+            val DRAWABLE_BOTTOM = 3
+            if (event.action == MotionEvent.ACTION_UP) {
+                if (event.rawX >= (binding?.lpnEt?.getRight() ?: 0) - (binding?.lpnEt?.getCompoundDrawables()?.get(DRAWABLE_RIGHT)?.bounds?.width() ?: 0)) {
+                    startActivityForResult(Intent(requireContext(), BarcodeScannerActivity::class.java), BARCODE_SCANNER_LPN)
+                    //ZxingOrient(this).initiateScan()
+                    return@OnTouchListener true
+                }
+            }
+            false
+        })
         binding?.quantityEt?.setOnEditorActionListener { v, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_DONE){
                 if(binding?.skuEt?.text?.isNotEmpty() == true){
@@ -309,33 +346,53 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             true
         }
         binding?.doneBtn?.setOnClickListener {
-            showAlert(requireContext(), getString(R.string.confirmation), getString(R.string.save_all_counts_confirm_msg), this::saveAllCounts)
-            //saveAllCounts()
-        }
-        /*binding?.emptySw?.setOnCheckedChangeListener { buttonView, isChecked ->
-            Log.i(TAG, "on changed empty slide toogle. is checked: $isChecked")
-            if(isChecked) {
-                Utilities.showAlert(requireContext(), getString(R.string.confirmation), getString(R.string.set_location_empty_confirm_msg), {
-                    viewModel.currentLocation.value?.let {
-                        toggleLocationAsEmpty(it.id)
-                    }
-                }, {
-                    binding?.emptySw?.isChecked = false
-                })
-            } else {
-                Utilities.showAlert(requireContext(), getString(R.string.confirmation), getString(R.string.set_location_empty_confirm_msg), {
-                    viewModel.currentLocation.value?.let{
-                        toggleLocationAsEmpty(it.id)
-                    }
-                }, {
-                    binding?.emptySw?.isChecked = true
-                })
+            if((totalPendingCounts + pendingToUpdate) > 0) {
+                showAlert(
+                    requireContext(),
+                    getString(R.string.confirmation),
+                    getString(R.string.save_all_counts_confirm_msg),
+                    this::saveAllTaskCounts
+                )
             }
-        }*/
+        }
+        binding?.emptySw?.setOnCheckedChangeListener { buttonView, isChecked ->
+            Log.i(TAG, "on changed empty slide toogle. is checked: $isChecked")
+            if(buttonView.isPressed) {
+                showAlert(requireContext(), getString(R.string.confirmation),
+                    when (isChecked) {
+                        true -> getString(R.string.set_location_empty_confirm_msg)
+                        else -> getString(R.string.set_location_not_empty_confirm_msg)
+                    },
+                    {
+                        viewModel.currentLocation.value?.let {
+                            toggleLocationIsEmpty(it.id, isChecked)
+                            if(it.isEmpty != true) {
+                                doAsync {
+                                    db.taskLocationsDao().updateLocationAsEmpty(it.id, isChecked)
+                                }
+                            }
+                        }
+                    }, {
+                        viewModel.currentLocation.value?.let {
+                            binding?.emptySw?.isChecked = !isChecked
+                            it.isEmpty = !isChecked
+                            if(it.isEmpty != true && isChecked) {
+                                doAsync {
+                                    db.taskLocationsDao().updateLocationAsEmpty(it.id, !isChecked)
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+        }
         viewModel.currentLocation.observe(viewLifecycleOwner, Observer { location ->
             Log.i(TAG, "current location observed $location")
             if (location != null) {
-                loadCurrentLocationCounts(location.id)
+                when(task?.taskType) {
+                    TaskType.Inventory -> loadCurrentLocationCounts(location.id)
+                    TaskType.Recount -> loadCurrentLocationRecounts(location.id)
+                }
                 binding?.locationCodeTv?.text = location.code
                 binding?.paginationTv?.text = getString(
                         R.string.location_pagination,
@@ -352,11 +409,31 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                 } else {
                     binding?.leftBtn?.visibility = View.VISIBLE
                 }
+                if (location.isEmpty == true) {
+                    binding?.editLy?.visibility = View.GONE
+                    binding?.countsLabelTv?.visibility = View.GONE
+                    binding?.currentLocationCountRv?.visibility = View.GONE
+                    binding?.totalCountsTv?.visibility = View.GONE
+                    binding?.doneBtn?.visibility = View.GONE
+                    binding?.emptyLocationTv?.visibility = View.VISIBLE
+                    binding?.emptySw?.isChecked = true
+                    hideParametersViews()
+                } else {
+                    binding?.editLy?.visibility = View.VISIBLE
+                    binding?.countsLabelTv?.visibility = View.VISIBLE
+                    binding?.currentLocationCountRv?.visibility = View.VISIBLE
+                    binding?.totalCountsTv?.visibility = View.VISIBLE
+                    binding?.doneBtn?.visibility = View.VISIBLE
+                    binding?.emptyLocationTv?.visibility = View.GONE
+                    binding?.emptySw?.isChecked = false
+                    renderTaskParameters()
+                }
             } else {
                 binding?.locationCodeTv?.text = ""
                 binding?.paginationTv?.text = ""
                 binding?.leftBtn?.visibility = View.GONE
                 binding?.rightBtn?.visibility = View.GONE
+                binding?.emptySw?.isChecked = false
             }
         })
         viewModel.currentItem.observe(viewLifecycleOwner, Observer {
@@ -380,10 +457,10 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                 it.isEmpty() -> {
                     hideUi()
                     viewModel.repository.setCurrentLocation(null)
-                    Utilities.showAlert(
-                            requireContext(),
-                            getString(R.string.information),
-                            getString(R.string.empy_or_null_task_lines)
+                    showAlert(
+                        requireContext(),
+                        getString(R.string.information),
+                        getString(R.string.empy_or_null_task_lines)
                     )
                 }
             }
@@ -391,19 +468,72 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
         viewModel.currentTask.observe(viewLifecycleOwner, {
             Log.i(TAG, "task observada: $it")
             task = it
+            if (task?.taskType == TaskType.Recount) {
+                binding?.skuEt?.setCompoundDrawables(null, null, null, null)
+                binding?.quantityEt?.setCompoundDrawables(null, null, null, null)
+                binding?.skuEt?.isEnabled = false
+                binding?.quantityEt?.isEnabled = false
+                binding?.saveBtn?.isEnabled = false
+                binding?.editLayoutLabelTv?.text = getString(R.string.select_a_recount)
+            } else {
+                binding?.skuEt?.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_baseline_camera_alt_24, 0)
+                binding?.quantityEt?.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_baseline_control_point_24, 0)
+                binding?.skuEt?.isEnabled = true
+                binding?.quantityEt?.isEnabled = true
+                binding?.saveBtn?.isEnabled = true
+                binding?.editLayoutLabelTv?.text = getString(R.string.adding_new_count)
+            }
             resetFormData()
             viewModel.repository.setCurrentTaskLocations(null)// provisional mientras carga
-            binding?.toolbar?.title = getString(R.string.task_title, it?.id ?: 0, it?.count ?: 0)
+            binding?.toolbar?.title = when(task?.taskType) {
+                TaskType.Inventory -> getString(R.string.inventory_task_title, it?.id ?: 0, it?.count ?: 0)
+                TaskType.Recount -> getString(R.string.recount_task_title, it?.id ?: 0, it?.count ?: 0)
+                TaskType.Certification -> getString(R.string.certification_task_title, it?.id ?: 0, it?.count ?: 0)
+                else -> getString(R.string.unknown_tasktype)
+            }
             if (task != null) {
                 Log.i(TAG, "Cargando locations de tarea...")
-                viewModel.repository.fetchTaskLocations(requireContext(), it?.id!!)
+                if(task?.taskType == TaskType.Inventory) {
+                    viewModel.repository.fetchTaskLocations(requireContext(), it?.id!!)
+                } else if(task?.taskType == TaskType.Recount) {
+                    viewModel.repository.fetchTaskLocationsRecount(requireContext(), it?.id!!)
+                }
                 loadTaskParameters()
             } else {
                 viewModel.repository.setCurrentTaskLocations(arrayListOf<Location>())
             }
         })
-        viewModel.repository.getCurrentLocationCounts().observe(viewLifecycleOwner, {
-            checkCountsTotals()
+        viewModel.repository.getCurrentLocationCounts().observe(viewLifecycleOwner, {counts ->
+            Log.i(TAG, "counts observados: $counts")
+            currentLocationCounts.clear()
+            activity?.runOnUiThread {
+                if (!counts.isNullOrEmpty()) {
+                    currentLocationCounts.addAll(counts)
+                    binding?.countsLabelTv?.text =
+                        getString(R.string.counts, currentLocationCounts.size)
+                    binding?.emptySw?.visibility = View.GONE
+                    if (viewModel.currentLocation.value?.isEmpty == true) {
+                        viewModel.currentLocation.value?.isEmpty = false
+                        doAsync {
+                            db.taskLocationsDao()
+                                .updateLocationAsEmpty(viewModel.currentLocation.value?.id!!, false)
+                        }
+                    }
+                } else {
+                    task?.parameters?.find { parameter ->
+                        parameter.parameterType == ParameterType.Empty
+                    }?.let { parameter ->
+                        Log.i(TAG, "La tarea tiene parametro empty = ${parameter.value}")
+                        if (parameter.value) {
+                            binding?.emptySw?.visibility = View.VISIBLE
+                        } else {
+                            binding?.emptySw?.visibility = View.GONE
+                        }
+                    }
+                }
+                mAdapter?.notifyDataSetChanged()
+                checkCountsTotals()
+            }
         })
         viewModel.savingCountsWorkProgress.observe(viewLifecycleOwner, {
             /*
@@ -415,7 +545,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             it.forEach { workInfo ->
                 if (WorkInfo.State.RUNNING == workInfo.state) {
                     binding?.progressBar?.visibility = View.VISIBLE
-                    Utilities.showToast(requireContext(), getString(R.string.uploading_counts))
+                    //Utilities.showToast(requireContext(), getString(R.string.uploading_counts))
                 } else {
                     binding?.progressBar?.visibility = View.INVISIBLE
                 }
@@ -427,19 +557,26 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                         msg = workInfo.outputData.getString("error").toString()
                     } else {
                         // si todo salio bien, actualizar id's remotos
-                        workInfo.outputData.keyValueMap.forEach{mapEntry ->
-                            val newRemoteId = mapEntry.value as Int
-                            val localId = mapEntry.key
-                            currentLocationCounts.find { itemCount ->
-                                itemCount.localId == localId
-                            }?.apply{
-                                id = newRemoteId
-                                uploaded = true
-                                sent = false
+                        doAsync {
+                            workInfo.outputData.keyValueMap.forEach { mapEntry ->
+                                val newRemoteId = mapEntry.value as Int?
+                                val localId = mapEntry.key
+                                val dbItemCount = db.itemCountDao().getByLocalId(localId)
+                                currentLocationCounts.find { itemCount ->
+                                    itemCount.localId == localId
+                                }?.apply {
+                                    uiThread {
+                                        id = newRemoteId ?: dbItemCount?.id
+                                        uploaded = dbItemCount?.uploaded ?: false
+                                        sent = dbItemCount?.sent ?: false
+                                        hasError = dbItemCount?.hasError
+                                        errorMessage = dbItemCount?.errorMessage
+                                    }
+                                }
                             }
                         }
                     }
-                    Utilities.showToast(requireContext(), msg)
+                    //Utilities.showToast(requireContext(), msg)
                 }
                 if (WorkInfo.State.FAILED == workInfo.state) {
                     var msg = getString(R.string.error_uploading_counts)
@@ -448,10 +585,10 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                     } else if (workInfo.outputData.hasKeyWithValueOfType("error", String::class.java)) {
                         msg = workInfo.outputData.getString("error").toString()
                     }
-                    Utilities.showToast(requireContext(), msg)
+                    //Utilities.showToast(requireContext(), msg)
                 }
                 if (WorkInfo.State.CANCELLED == workInfo.state) {
-                    Utilities.showToast(requireContext(), getString(R.string.counts_uploading_cancelled))
+                    //Utilities.showToast(requireContext(), getString(R.string.counts_uploading_cancelled))
                 }
             }
         })
@@ -460,7 +597,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             it.forEach { workInfo ->
                 if (WorkInfo.State.RUNNING == workInfo.state) {
                     binding?.progressBar?.visibility = View.VISIBLE
-                    Utilities.showToast(requireContext(), getString(R.string.uploading_count_edit))
+                    //Utilities.showToast(requireContext(), getString(R.string.uploading_count_edit))
                 } else {
                     binding?.progressBar?.visibility = View.INVISIBLE
                 }
@@ -480,25 +617,27 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                             }
                             if(index > -1){
                                 // si el id remoto es distinto, entonces se creo un nuevo conteo y hay
-                                // que eliminar el anterior agregar el nuevo a la lista, previamente guardado por el worker
-                                if(currentLocationCounts[index].id != mapEntry.value as Int) {
-                                    doAsync {
-                                        db.itemCountDao().getById(mapEntry.value as Int)?.let {newItemCount ->
-                                            uiThread {
-                                                currentLocationCounts[index] = newItemCount
-                                                mAdapter?.notifyDataSetChanged()
-                                            }
+                                // que sustituir el anterior por el nuevo guardado por el worker
+                                val remoteId = mapEntry.value as Int?
+                                doAsync {
+                                    db.itemCountDao().getByLocalId(mapEntry.key)?.let { newItemCount ->
+                                        if (remoteId != null && currentLocationCounts[index].id != remoteId) {
+                                            currentLocationCounts[index] = newItemCount
+                                        } else {
+                                            currentLocationCounts[index].dirty = newItemCount.dirty
+                                            currentLocationCounts[index].sent = newItemCount.sent
+                                            currentLocationCounts[index].hasError = newItemCount.hasError
+                                            currentLocationCounts[index].errorMessage = newItemCount.errorMessage
+                                        }
+                                        uiThread {
+                                            mAdapter?.notifyDataSetChanged()
                                         }
                                     }
-                                } else {
-                                    currentLocationCounts[index].dirty = false
-                                    currentLocationCounts[index].sent = false
-                                    mAdapter?.notifyDataSetChanged()
                                 }
                             }
                         }
                     }
-                    Utilities.showToast(requireContext(), msg)
+                    //Utilities.showToast(requireContext(), msg)
                 }
                 if (WorkInfo.State.FAILED == workInfo.state) {
                     var msg = getString(R.string.error_uploading_counts)
@@ -507,10 +646,10 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                     } else if (workInfo.outputData.hasKeyWithValueOfType("error", String::class.java)) {
                         msg = workInfo.outputData.getString("error").toString()
                     }
-                    Utilities.showToast(requireContext(), msg)
+                    //Utilities.showToast(requireContext(), msg)
                 }
                 if (WorkInfo.State.CANCELLED == workInfo.state) {
-                    Utilities.showToast(requireContext(), getString(R.string.counts_uploading_cancelled))
+                    //Utilities.showToast(requireContext(), getString(R.string.counts_uploading_cancelled))
                 }
             }
         })
@@ -519,26 +658,29 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
         initAdapter()
     }
 
-    private fun toggleLocationAsEmpty(locationId: Int){
-        Log.i(TAG, "on toggleLocationAsEmpty. locationId: $locationId. is checked: ${binding?.emptySw?.isChecked}")
-        if (!isEmptyLocations.contains(locationId) && binding?.emptySw?.isChecked == true) {
+    private fun toggleLocationIsEmpty(locationId: Int, isEmpty: Boolean){
+        Log.i(TAG, "on toggleLocationAsEmpty. locationId: $locationId. is checked: $isEmpty")
+        Log.i(TAG, "viewModel.currentLocation.value?.isEmpty: ${viewModel.currentLocation.value?.isEmpty}")
+        if (viewModel.currentLocation.value?.isEmpty != true && isEmpty) {
             binding?.editLy?.visibility = View.GONE
             binding?.countsLabelTv?.visibility = View.GONE
             binding?.currentLocationCountRv?.visibility = View.GONE
             binding?.totalCountsTv?.visibility = View.GONE
             binding?.doneBtn?.visibility = View.GONE
             binding?.emptyLocationTv?.visibility = View.VISIBLE
+            binding?.emptySw?.isChecked = isEmpty
+            viewModel.currentLocation.value?.isEmpty = isEmpty
             hideParametersViews()
-            isEmptyLocations.add(locationId)
-        } else if (isEmptyLocations.contains(locationId) && binding?.emptySw?.isChecked == false) {
+            enqueIsEmptyLocation(arrayListOf(generateItemCountIsEmpty()), locationId, isEmpty)
+        } else if (viewModel.currentLocation.value?.isEmpty == true && !isEmpty) {
             binding?.editLy?.visibility = View.VISIBLE
             binding?.countsLabelTv?.visibility = View.VISIBLE
             binding?.currentLocationCountRv?.visibility = View.VISIBLE
             binding?.totalCountsTv?.visibility = View.VISIBLE
             binding?.doneBtn?.visibility = View.VISIBLE
             binding?.emptyLocationTv?.visibility = View.GONE
+            binding?.emptySw?.isChecked = isEmpty
             renderTaskParameters()
-            isEmptyLocations.remove(locationId)
         }
     }
 
@@ -615,9 +757,9 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                         ParameterType.Serial -> {
                             binding?.serialContainer
                         }
-                        ParameterType.Empty -> {
+                        /*ParameterType.Empty -> {
                             binding?.emptySw
-                        }
+                        }*/
                         else -> null
                     }
                     if(parameter.value) {
@@ -640,35 +782,65 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
 
     private fun checkCountsTotals(){
         doAsync {
-            totalCounts = db.itemCountDao().countAllByDevice(Utilities.getAndroidId(requireContext()))
-            totalPendingCounts = db.itemCountDao().countAllPendingToUploadByDevice(Utilities.getAndroidId(requireContext()))
-            val pendingToUpdate = db.itemCountDao().countAllPendingToUpdateByDevice(Utilities.getAndroidId(requireContext()))
+            totalCounts = when(task?.taskType) {
+                TaskType.Inventory -> db.itemCountDao().countAllByTask(task?.id!!)
+                TaskType.Recount -> db.itemCountDao().countAllRecountByTask(task?.id!!)
+                else -> 0
+            }
+            Log.i(TAG, "totalCounts: $totalCounts")
+            totalPendingCounts = when(task?.taskType) {
+                TaskType.Inventory -> db.itemCountDao().countAllPendingToUploadByTask(task?.id!!)
+                TaskType.Recount -> db.itemCountDao()
+                    .countAllPendingRecountToUploadByTask(task?.id!!)
+                else -> 0
+            }
+            Log.i(TAG, "totalPendingCounts: $totalPendingCounts")
+            pendingToUpdate = when(task?.taskType) {
+                TaskType.Inventory -> db.itemCountDao().countAllPendingToUpdateByTask(task?.id!!)
+                TaskType.Recount -> db.itemCountDao()
+                    .countAllPendingRecountToUpdateByTask(task?.id!!)
+                else -> 0
+            }
+            Log.i(TAG, "pendingToUpdate: $pendingToUpdate")
             uiThread {
-                binding?.totalCountsTv?.text = getString(R.string.total_counts, totalCounts)
-                binding?.doneBtn?.text = getString(R.string.save_pending_counts, totalPendingCounts + pendingToUpdate)
+                binding?.countsLabelTv?.text = getString(R.string.counts, currentLocationCounts.size)
+                binding?.totalCountsTv?.text = getString(R.string.total_task_counts, totalCounts)
+                binding?.doneBtn?.text = getString(R.string.save_task_pending_counts, totalPendingCounts + pendingToUpdate)
+                binding?.doneBtn?.isEnabled = totalPendingCounts + pendingToUpdate > 0
             }
         }
     }
 
-    private fun saveAllCounts(){
-        Log.i(TAG, "saving all counts...")
+    private fun saveAllTaskCounts(){
+        Log.i(TAG, "saving all task counts...")
         try {
             doAsync {
-                val newCountsToSave = db.itemCountDao()
-                    .getAllPendingToUploadByDevice(Utilities.getAndroidId(requireContext()))
+                val newCountsToSave = when(task?.taskType) {
+                    TaskType.Inventory -> {
+                        db.itemCountDao()
+                            .getAllPendingToUploadByTask(task?.id!!)
+                    }
+                    TaskType.Recount -> {
+                        db.itemCountDao()
+                            .getAllPendingRecountToUploadByTask(task?.id!!)
+                    }
+                    else -> null
+                }
                 Log.i(TAG, "Nuevos conteos por subir y crear: $newCountsToSave")
-                val countsToUpdate = db.itemCountDao()
-                    .getAllPendingToUpdateByDevice(Utilities.getAndroidId(requireContext()))
-                Log.i(TAG, "Conteos por subir y actualizar: $newCountsToSave")
+                val countsToUpdate = when(task?.taskType){
+                    TaskType.Inventory -> db.itemCountDao()
+                        .getAllPendingToUpdateByTask(task?.id!!)
+                    TaskType.Recount -> db.itemCountDao()
+                        .getAllPendingRecountToUpdateByTask(task?.id!!)
+                    else -> null
+                }
+                Log.i(TAG, "Conteos por subir y actualizar: $countsToUpdate")
                 if (!newCountsToSave.isNullOrEmpty()) {
-                    viewModel.repository.setIsSavingCounts(true)
-                    MyWorkerManagerService.enqueCountToUploadArrayWork(
-                        requireContext(),
-                        newCountsToSave,
-                        Constants.SAVING_COUNTS_PROGRESS
-                    )
+                    Log.i(TAG, "Se encontraron conteos nuevos por subir: $countsToUpdate")
+                    enqueCountsToUpload(newCountsToSave)
                 }
                 if (!countsToUpdate.isNullOrEmpty()) {
+                    Log.i(TAG, "Se encontraron conteos por actualizar: $countsToUpdate")
                     countsToUpdate.forEach { itemCount ->
                         MyWorkerManagerService.enqueEditCountToUploadWork(
                             requireContext(),
@@ -679,26 +851,48 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                 dismiss()
             }
         } catch (e: Exception) {
-            Utilities.showAlert(requireContext(), getString(R.string.error), e.printStackTrace().toString())
+            Utilities.showAlert(requireContext(), getString(R.string.error), getString(R.string.error_uploading_counts))
         }
+    }
+
+    private fun enqueCountsToUpload(counts: List<ItemCount>){
+        viewModel.repository.setIsSavingCounts(true)
+        MyWorkerManagerService.enqueCountToUploadArrayWork(
+            requireContext(),
+            counts,
+            task?.id!!,
+            Constants.SAVING_COUNTS_PROGRESS
+        )
+    }
+
+    private fun enqueIsEmptyLocation(counts: List<ItemCount>, locationId: Int, isEmpty: Boolean){
+        viewModel.repository.setIsSavingCounts(true)
+        MyWorkerManagerService.enqueChangeLocationIsEmptyWork(
+            requireContext(),
+            counts,
+            task?.id!!,
+            locationId,
+            isEmpty,
+            Constants.SENDING_EMPTY_PROGRESS
+        )
     }
 
     private fun generateItemCount(): ItemCount{
         val item = viewModel.currentItem.value
         val location = viewModel.currentLocation.value
-        val countToSave = ItemCount(localId = UUID.randomUUID().toString())
+        val countToSave = ItemCount(id = Random.nextInt(999999, 99999999), localId = UUID.randomUUID().toString())
         countToSave.ephuDeviceId = Utilities.getAndroidId(requireContext())
         countToSave.itemId = item?.id
         countToSave.taskId = task?.id
         countToSave.location = location?.code
         countToSave.dirty = true
         countToSave.readTimestamp = DateTime().toLocalDateTime().toString()
-        countToSave.quantity = binding?.quantityEt?.text.toString().toInt()
+        countToSave.quantity = binding?.quantityEt?.text.toString().toFloat()
         // variable boolean values
         task?.parameters?.forEach { parameter ->
             if(parameter.value) {
                 when (parameter.parameterType) {
-                    ParameterType.Serial -> {
+                    ParameterType.Serial -> {1
                         countToSave.serial = binding?.serialEt?.text.toString()
                     }
                     ParameterType.Lpn -> {
@@ -717,9 +911,6 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                         Log.i(TAG, "fecha de expiracion parseada: $date")
                         countToSave.expiryDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date ?: "")
                     }
-                    /*ParameterType.Empty -> {
-                    countToSave.empty = binding?.emptySw.isChecked
-                }*/
                 }
             }
         }
@@ -733,31 +924,84 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
         return countToSave
     }
 
+    private fun generateItemCountIsEmpty(): ItemCount{
+        val location = viewModel.currentLocation.value
+        val countToSave = ItemCount(id = Random.nextInt(999999, 99999999), localId = UUID.randomUUID().toString())
+        countToSave.ephuDeviceId = Utilities.getAndroidId(requireContext())
+        countToSave.itemId = null
+        countToSave.taskId = task?.id
+        countToSave.location = location?.code
+        countToSave.dirty = true
+        countToSave.readTimestamp = DateTime().toLocalDateTime().toString()
+        countToSave.quantity = 0f
+        // variable boolean values
+        /*task?.parameters?.forEach { parameter ->
+            if(parameter.value) {
+                when (parameter.parameterType) {
+                    ParameterType.Serial -> {1
+                        countToSave.serial = binding?.serialEt?.text.toString()
+                    }
+                    ParameterType.Lpn -> {
+                        countToSave.lpnCode = binding?.lpnEt?.text.toString()
+                    }
+                    ParameterType.Lot -> {
+                        countToSave.lot = binding?.lotEt?.text.toString()
+                    }
+                    ParameterType.CreatedDate -> {
+                        val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(binding?.createdDateEt?.text.toString())
+                        Log.i(TAG, "fecha de creacion parseada: $date")
+                        countToSave.createdDate =  SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date ?: "")
+                    }
+                    ParameterType.ExpiryDate -> {
+                        val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(binding?.expiryDateEt?.text.toString())
+                        Log.i(TAG, "fecha de expiracion parseada: $date")
+                        countToSave.expiryDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date ?: "")
+                    }
+                }
+            }
+        }*/
+        countToSave.lpnCode = "EPHU_EMPTY_${countToSave.localId}"
+        // for local use
+        countToSave.description = null
+        countToSave.sku = null
+        countToSave.locationId = location?.id
+        countToSave.uploaded = false
+        countToSave.sent = false
+        return countToSave
+    }
+
     private fun saveCount(){
         doAsync {
             var itemCount: ItemCount? = null
-            if (isEditing == -1) { // cuando se crea uno nuevo
+            if (isEditing == -1 && task?.taskType == TaskType.Inventory) { // cuando se crea uno nuevo
                 itemCount = generateItemCount()
-                currentLocationCounts.add(0, itemCount)
-                uiThread {
-                    //mAdapter?.notifyItemInserted(0)
-                    mAdapter?.notifyDataSetChanged()
-                    binding?.countsLabelTv?.text = getString(R.string.counts, currentLocationCounts.size)
-                }
                 db.itemCountDao().insert(itemCount)
-                viewModel.repository.setCurrentLocationCounts(currentLocationCounts)
+                viewModel.repository.getCurrentLocationCounts().value?.add(0, itemCount)
+                viewModel.repository.getCurrentLocationCounts().value?.let {
+                    viewModel.repository.setCurrentLocationCounts(it)
+                }
                 viewModel.repository.setCurrentItem(null)
                 //MyWorkerManagerService.enqueCountToUploadWork(requireContext(), item)
             } else { // cuando se edita uno existente
                 mAdapter?.getItemAtPosition(isEditing)?.let { countToSave ->
                     val item = viewModel.currentItem.value
-                    countToSave.itemId = item?.id
                     countToSave.dirty = true
                     countToSave.sent = false
                     countToSave.editing = false
-                    countToSave.quantity = binding?.quantityEt?.text.toString().toInt()
+                    if(task?.taskType == TaskType.Recount) {
+                        countToSave.recount = true
+                    }
+                    countToSave.locationId = viewModel.currentLocation.value?.id
+                    countToSave.quantity = binding?.quantityEt?.text.toString().toFloat()
+                    if(task?.taskType == TaskType.Inventory) {
+                        countToSave.itemId = item?.id
+                        countToSave.lpnCode =
+                            countToSave.lpnCode ?: viewModel.currentLocation.value?.code
+                        countToSave.description = item?.description
+                        countToSave.sku = item?.sku
+                    }
                     task?.parameters?.forEach { parameter ->
-                        if(parameter.value) {
+                        if (parameter.value) {
                             when (parameter.parameterType) {
                                 ParameterType.Serial -> {
                                     countToSave.serial = binding?.serialEt?.text.toString()
@@ -770,29 +1014,47 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                                 }
                                 ParameterType.CreatedDate -> {
                                     binding?.createdDateEt?.text?.let { date ->
-                                        val parsedDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(date.toString())
+                                        val parsedDate = SimpleDateFormat(
+                                            "dd/MM/yyyy",
+                                            Locale.getDefault()
+                                        ).parse(date.toString())
                                         Log.i(TAG, "fecha de creacion parseada: $parsedDate")
-                                        countToSave.createdDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(parsedDate
-                                                ?: "")
+                                        countToSave.createdDate = SimpleDateFormat(
+                                            "yyyy-MM-dd",
+                                            Locale.getDefault()
+                                        ).format(
+                                            parsedDate
+                                                ?: ""
+                                        )
                                     }
                                 }
                                 ParameterType.ExpiryDate -> {
                                     binding?.expiryDateEt?.text?.let { date ->
-                                        val parsedDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(date.toString())
+                                        val parsedDate = SimpleDateFormat(
+                                            "dd/MM/yyyy",
+                                            Locale.getDefault()
+                                        ).parse(date.toString())
                                         Log.i(TAG, "fecha de expiracion parseada: $parsedDate")
-                                        countToSave.expiryDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(parsedDate
-                                                ?: "")
+                                        countToSave.expiryDate = SimpleDateFormat(
+                                            "yyyy-MM-dd",
+                                            Locale.getDefault()
+                                        ).format(
+                                            parsedDate
+                                                ?: ""
+                                        )
                                     }
                                 }
                             }
                         }
                     }
-                    countToSave.lpnCode = countToSave.lpnCode ?: viewModel.currentLocation.value?.code
-                    countToSave.description = item?.description
-                    countToSave.sku = item?.sku
                     //countToSave.uploaded = false
                     itemCount = countToSave
                     db.itemCountDao().update(countToSave)
+                    if (task?.taskType == TaskType.Recount) {
+                        val location = viewModel.currentLocation.value
+                        val recounts = currentLocationCounts
+                        db.taskLocationsDao().updateDetails(Gson().toJson(recounts), location?.id!!)
+                    }
                     viewModel.repository.setCurrentItem(null)
                     //mAdapter?.notifyDataSetChanged()
                     finishEditing(itemCount!!, isEditing)
@@ -808,13 +1070,89 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
         if (locationId != null) {
             doAsync {
                 val counts = db.taskLocationsDao().getLocationCounts(locationId, task?.id!!)
-                uiThread {
-                    currentLocationCounts.clear()
-                    if(!counts.isNullOrEmpty()){
-                        currentLocationCounts.addAll(counts)
+                counts.forEach {
+                    it.editing = false
+                }
+                val countsArrayList = arrayListOf<ItemCount>()
+                countsArrayList.addAll(counts)
+                viewModel.repository.setCurrentLocationCounts(countsArrayList)
+            }
+        } else {
+            currentLocationCounts.clear()
+            mAdapter?.notifyDataSetChanged()
+        }
+        checkCountsTotals()
+    }
+
+    private fun loadCurrentLocationRecounts(_locationId: Int?){
+        Log.i(TAG, "cargando reconteos de la ubicacion $_locationId de la tarea ${task?.id}...")
+        if (_locationId != null && task?.id != null) {
+            var recounts = listOf<ItemCount>()
+            val deviceId = Utilities.getAndroidId(requireContext())
+            val _location = viewModel.currentLocation.value
+            doAsync {
+                val qRecounts = db.taskLocationsDao().getLocationRecounts(_locationId, task?.id!!)
+                if(qRecounts.isNullOrEmpty()){
+                    Log.e(TAG, "No hay reconteos para la tarea ${task?.id} en la ubicacion $_locationId")
+                } else {
+                    Log.i(TAG, "Fetch local location's recounts result: $qRecounts")
+                    qRecounts.let { recountArrayStr ->
+                        Gson().fromJson(recountArrayStr, JsonArray::class.java).forEach {
+                            val itemCount = Gson().fromJson(it, ItemCount::class.java)
+                            var itemExists: Boolean = false
+                            if (itemCount.itemId == null) {
+                                showAlert(
+                                    requireContext(),
+                                    getString(R.string.error),
+                                    getString(R.string.not_existent_item_error_msg)
+                                )
+                                return@doAsync
+                            } else {
+                                itemExists = db.itemDao().getById(itemCount.itemId!!) != null
+                            }
+                            if (!itemExists) {
+                                showAlert(
+                                    requireContext(),
+                                    getString(R.string.error),
+                                    getString(R.string.not_existent_item_error_msg)
+                                )
+                                return@doAsync
+                            }
+                        }
+                        recounts = Gson().fromJson(recountArrayStr, JsonArray::class.java).map {
+                            val itemCount = Gson().fromJson(it, ItemCount::class.java)
+                            val item = db.itemDao().getById(itemCount.itemId!!)
+                            itemCount.apply {
+                                localId = if (this.localId.isEmpty()) {
+                                    UUID.randomUUID().toString()
+                                } else {
+                                    this.localId
+                                }
+                                quantity = if (this.quantity > 0f) {
+                                    quantity
+                                } else {
+                                    0f
+                                }
+                                taskId = task?.id
+                                recount = true
+                                sku = item?.sku
+                                ephuDeviceId = deviceId
+                                locationId = _location?.id
+                                editing = false
+                                location = _location?.code
+                                lpnCode = _location?.code
+                                description =
+                                    item?.description ?: getString(R.string.without_description)
+                            }
+                        }
+                        val recountsArray = arrayListOf<ItemCount>()
+                        recountsArray.addAll(recounts)
+                        db.itemCountDao().insertAll(recountsArray)
+                        Log.i(TAG, "reconteos cargados: $recounts")
                     }
-                    mAdapter?.notifyDataSetChanged()
-                    binding?.countsLabelTv?.text = getString(R.string.counts, currentLocationCounts.size)
+                    val recountsArray = arrayListOf<ItemCount>()
+                    recountsArray.addAll(recounts)
+                    viewModel.repository.setCurrentLocationCounts(recountsArray)
                 }
             }
         } else {
@@ -827,17 +1165,11 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
     private fun onDeleteCountListener(item: ItemCount, pos: Int){
         doAsync {
             db.itemCountDao().delete(item)
-            uiThread {
-                currentLocationCounts.remove(item)
-                binding?.countsLabelTv?.text = getString(R.string.counts, currentLocationCounts.size)
-                viewModel.repository.setCurrentLocationCounts(currentLocationCounts)
-                //mAdapter?.notifyItemRemoved(pos)
-                mAdapter?.notifyDataSetChanged()
-                binding?.currentLocationCountRv?.invalidate()
-                if(item.uploaded == true) {
-                    MyWorkerManagerService.enqueDeleteCountWork(requireContext(), item)
-                }
+            if(item.uploaded) {
+                MyWorkerManagerService.enqueDeleteCountWork(requireContext(), item)
             }
+            viewModel.repository.getCurrentLocationCounts().value?.remove(item)
+            viewModel.repository.setCurrentLocationCounts(viewModel.repository.getCurrentLocationCounts().value!!)
         }
     }
 
@@ -851,6 +1183,22 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                 finishEditing(it, isEditing)
             }
         }
+        if(task?.taskType == TaskType.Recount && count.dirty) {
+            Utilities.showAlert(
+                requireContext(),
+                getString(R.string.warning),
+                getString(R.string.edit_recount_count_confirm_msg),
+                {
+                    editCount(count, pos)
+                },
+                null
+            )
+        } else {
+            editCount(count, pos)
+        }
+    }
+
+    private fun editCount(count: ItemCount, pos: Int){
         Handler().postDelayed({
             activity?.runOnUiThread {
                 isEditing = pos
@@ -859,10 +1207,19 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
         }, 50)
         binding?.finishEditingBtn?.visibility = View.VISIBLE
         binding?.editLy?.setBackgroundResource(R.drawable.round_corners)
-        binding?.editLayoutLabelTv?.text = getString(R.string.editing_count)
+        binding?.editLayoutLabelTv?.text = when(count.recount) {
+            true -> getString(R.string.editing_recount)
+            else -> getString(R.string.editing_count)
+        }
+        if(task?.taskType == TaskType.Recount){
+            binding?.quantityEt?.isEnabled = true
+            binding?.saveBtn?.isEnabled = true
+        }
         binding?.finishEditingBtn?.setOnClickListener{
             finishEditing(count, pos)
         }
+        binding?.leftBtn?.isEnabled = false
+        binding?.rightBtn?.isEnabled = false
         presentCount(count)
     }
 
@@ -871,7 +1228,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
         activity?.runOnUiThread {
             //val oldPosition = isEditing
             isEditing = -1
-            currentLocationCounts.getOrNull(position)?.editing = false
+            currentLocationCounts[position].editing = false
             //mAdapter?.isEditing = isEditing
             Log.i(TAG, "finishing... refresh item at position $position")
             mAdapter?.notifyItemChanged(position)
@@ -880,7 +1237,12 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             resetFormData()
             binding?.editLy?.setBackgroundResource(R.color.white)
             binding?.finishEditingBtn?.visibility = View.INVISIBLE
-            binding?.editLayoutLabelTv?.text = getString(R.string.adding_new_count)
+            binding?.editLayoutLabelTv?.text = when(count.recount) {
+                true -> getString(R.string.adding_new_count)
+                else -> getString(R.string.select_a_recount)
+            }
+            binding?.leftBtn?.isEnabled = true
+            binding?.rightBtn?.isEnabled = true
         }
     }
 
@@ -898,6 +1260,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
     private fun resetFormData(){
         activity?.runOnUiThread {
             binding?.descriptionEt?.setText("")
+            binding?.packagingTv?.text = ""
             binding?.quantityEt?.setText("")
             binding?.skuEt?.setText("")
             // cleaning values
@@ -906,6 +1269,11 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             binding?.lotEt?.setText("")
             binding?.createdDateEt?.setText("")
             binding?.lpnEt?.setText("")
+            if(task?.taskType == TaskType.Recount){
+                binding?.quantityEt?.isEnabled = false
+                binding?.saveBtn?.isEnabled = false
+            }
+            binding?.skuEt?.requestFocus()
         }
     }
 
@@ -927,6 +1295,12 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
 
     private fun presentItem(item: Item?){
         binding?.descriptionEt?.setText(((item?.sku ?: getString(R.string.without_sku)) + ": " + (item?.description ?: getString(R.string.without_description))).toUpperCase())
+        binding?.packagingTv?.text = getString(R.string.packagin, item?.primaryUnit ?: "", item?.packaging ?: 0, item?.secondaryUnit ?: "")
+        if(item?.requireDecimalQty == true){
+            binding?.quantityEt?.setInputType(InputType.TYPE_NUMBER_FLAG_DECIMAL.or(InputType.TYPE_CLASS_NUMBER))
+        } else {
+            binding?.quantityEt?.setInputType(InputType.TYPE_CLASS_NUMBER)
+        }
         if(item == null){
             resetFormData()
         }
@@ -935,6 +1309,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
     private fun presentCount(count: ItemCount?){
         Log.i(TAG, "presentando conteo...")
         binding?.descriptionEt?.setText(count?.description ?: "")
+        binding?.packagingTv?.text = ""
         if(count == null){
             resetFormData()
         } else {
@@ -962,9 +1337,11 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                 }
             }
             binding?.serialEt?.setText(count.serial)
-            doAsync {
-                db.itemDao().getById(count.itemId!!).let{
-                    viewModel.repository.setCurrentItem(it)
+            count.itemId?.let { itemId ->
+                doAsync {
+                    db.itemDao().getById(itemId).let {
+                        viewModel.repository.setCurrentItem(it)
+                    }
                 }
             }
         }
@@ -984,14 +1361,14 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        /*val scanResult = ZxingOrient.parseActivityResult(requestCode, resultCode, data);
-        if (scanResult != null) {
-            Log.i(TAG, "resultados del scanner: ${scanResult}")
-        }*/
+        val  barcode = data?.getStringExtra("barcode") ?: ""
         if(resultCode == RESULT_OK && requestCode == BARCODE_SCANNER){
-            val  barcode = data?.getStringExtra("barcode") ?: ""
             searchItemBySku(barcode)
-        } else if (resultCode != RESULT_OK && requestCode == BARCODE_SCANNER){
+        } else if(resultCode == RESULT_OK && requestCode == BARCODE_SCANNER_LPN){
+            binding?.lpnEt?.setText(barcode)
+        } else if(resultCode == RESULT_OK && requestCode == BARCODE_SCANNER_LOT){
+            binding?.lotEt?.setText(barcode)
+        } else if (resultCode != RESULT_OK && (requestCode == BARCODE_SCANNER || requestCode == BARCODE_SCANNER_LPN || requestCode == BARCODE_SCANNER_LOT)){
             showToast(requireContext(), getString(R.string.barcode_scanner_error))
         }
     }
@@ -1081,14 +1458,14 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
         super.onStop()
         // TODO: cambiar estado de de tarea actual
     }
-
+*/
     override fun onPause() {
+        Log.i(TAG, "onPause()...")
         super.onPause()
-        // TODO: cambiar estado de de tarea actual
-    }*/
+    }
 
     override fun onDismiss(dialog: DialogInterface) {
-        // TODO: cambiar estado de de tarea actual
+        Log.i(TAG, "onDismiss()...")
         task?.let {
             changeTaskState(it, TaskState.Paused)
         }

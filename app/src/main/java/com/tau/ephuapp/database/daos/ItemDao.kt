@@ -35,7 +35,7 @@ interface ItemDao {
     fun deleteAllByOwner(ownerId: Int)
 
     @Query("SELECT * FROM item WHERE id = CAST(:id AS NUMERIC)")
-    fun getById(id: Int): Item
+    fun getById(id: Int): Item?
 
     @Query("SELECT * FROM item WHERE sku = :str OR ean13 = :str OR ean14 = :str LIMIT 1")
     fun search(str: String): Item?

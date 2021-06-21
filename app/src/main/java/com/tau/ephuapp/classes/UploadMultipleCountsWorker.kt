@@ -5,18 +5,18 @@ import android.database.sqlite.SQLiteAccessPermException
 import android.database.sqlite.SQLiteCantOpenDatabaseException
 import android.database.sqlite.SQLiteDatabaseLockedException
 import android.util.Log
-import androidx.work.Data
-import androidx.work.Worker
-import androidx.work.WorkerParameters
-import androidx.work.workDataOf
+import androidx.work.*
 import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.tau.ephuapp.R
 import com.tau.ephuapp.database.AppDatabase
 import com.tau.ephuapp.models.ItemCount
+import com.tau.ephuapp.models.TaskType
 import com.tau.ephuapp.services.MyClient
 import com.tau.ephuapp.services.MyDataService
 import java.io.IOException
 import java.net.SocketTimeoutException
+import java.util.*
 
 
 class UploadMultipleCountsWorker
@@ -39,13 +39,24 @@ class UploadMultipleCountsWorker
         } catch (ex: SQLiteCantOpenDatabaseException) {
             Log.e(TAG, "Database error found", ex)
         }
-        if (inputData.hasKeyWithValueOfType("countsJSON", String::class.java)) {
+        if (inputData.hasKeyWithValueOfType<Array<String>>("counts") && inputData.hasKeyWithValueOfType<Int>("taskId")) {
             Log.i(TAG, "conteos recibidos con exito")
-            val pendingToUploadCounts = Gson().fromJson(
-                inputData.getString("countsJSON"),
-                arrayListOf<ItemCount>().javaClass
-            )
-            Log.i(TAG, "conteos: $pendingToUploadCounts")
+            val localIds = inputData.getStringArray("counts")
+            val taskId = inputData.getInt("taskId", 0)
+            if(localIds == null){
+                Log.e(TAG, "Error con los local ids recibidos en el worker")
+                return Result.failure()
+            }
+            if(taskId == 0){
+                Log.e(TAG, "Error con el id de tarea recibida en el worker")
+                return Result.failure()
+            }
+            val pendingToUploadCounts = db?.itemCountDao()?.loadAllByLocalIds(localIds)
+            if(pendingToUploadCounts == null){
+                Log.e(TAG, "Error con los registros de conteos obtenidos en el worker")
+                return Result.failure()
+            }
+            Log.i(TAG, "Conteos cargados en el worker: $pendingToUploadCounts")
             val dataService: MyDataService = MyClient.getInstance(appContext).create(MyDataService::class.java)
             Log.i(TAG, "guardando conteos...")
             try {
@@ -69,8 +80,47 @@ class UploadMultipleCountsWorker
                     try {
                         db?.runInTransaction {
                             uploadedCounts?.forEach { uploadedCount ->
-                                db?.itemCountDao()
-                                    ?.updateUploaded(uploadedCount.localId, uploadedCount.id)
+                                if(uploadedCount.hasError == false && uploadedCount.id != null) {
+                                    db?.itemCountDao()
+                                        ?.updateUploaded(uploadedCount.localId, uploadedCount.id!!)
+                                } else {
+                                    db?.itemCountDao()
+                                        ?.updateWithError(uploadedCount.errorMessage ?: applicationContext.getString(R.string.unknown_error), uploadedCount.localId)
+                                }
+                            }
+                            val task = db?.tasksDao()?.getById(taskId)
+                            if (task?.taskType == TaskType.Recount) {
+                                Log.i(TAG, "la tarea es de reconteo")
+                                val locationsToUpdate = db?.taskLocationsDao()?.getAllByTask(task.id)
+                                Log.i(TAG, "las ubicaciones a actualizar son: $locationsToUpdate")
+                                locationsToUpdate?.forEach{location ->
+                                    Log.i(
+                                        TAG,
+                                        "actualizando details de la ubicacion ${location.id}"
+                                    )
+                                    val locationRecounts = Gson().fromJson(location.details, JsonArray::class.java)?.map {jsonEl ->
+                                        val itemCount = Gson().fromJson(jsonEl, ItemCount::class.java)
+                                        val foundUploadedItemCount = uploadedCounts?.find {_itemCount ->
+                                            _itemCount.localId == itemCount.localId
+                                        }
+                                        if (foundUploadedItemCount != null){
+                                            itemCount.id = foundUploadedItemCount.id
+                                            itemCount.uploaded = true
+                                            itemCount.sent = false
+                                            itemCount.dirty = false
+                                        }
+                                        itemCount
+                                    }
+                                    if (!locationRecounts.isNullOrEmpty()) {
+                                        val details = Gson().toJson(locationRecounts).toString()
+                                        db?.taskLocationsDao()
+                                            ?.updateDetails(details, location.id)
+                                        Log.i(
+                                            TAG,
+                                            "ubicacion ${location.id} actualizada con el details: $details"
+                                        )
+                                    }
+                                }
                             }
                         }
                     } catch (e: Exception){
@@ -79,7 +129,7 @@ class UploadMultipleCountsWorker
                                 "exception" to appContext.getString(R.string.counts_uploaded_successfully_error_on_local_update)
                         ))
                     }
-                    val dataMap = mutableMapOf<String, Int>()
+                    val dataMap = mutableMapOf<String, Int?>()
                     uploadedCounts?.forEach {
                         dataMap.put(it.localId, it.id)
                     } ?: mutableMapOf<String, Int>()

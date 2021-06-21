@@ -28,13 +28,17 @@
 
         <TextView
             android:id="@+id/taskNumberTv"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="20dp"
-            android:layout_marginLeft="20dp"
+            android:layout_marginEnd="10dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:singleLine="true"
             android:text="@string/demo_task_title_line"
             android:textSize="18sp"
             android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@+id/optionsBtn"
             app:layout_constraintStart_toEndOf="@+id/taskStateTv"
             app:layout_constraintTop_toTopOf="@+id/taskStateTv" />
 

@@ -12,6 +12,7 @@ import com.tau.ephuapp.classes.Utilities
 import com.tau.ephuapp.databinding.TaskCardItemBinding
 import com.tau.ephuapp.models.Task
 import com.tau.ephuapp.models.TaskState
+import com.tau.ephuapp.models.TaskType
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
@@ -28,7 +29,12 @@ class TaskAdapter(private val tasksList: ArrayList<Task>, val context: Context, 
     override fun onBindViewHolder(holder: TaskHolder, position: Int) {
         with(holder){
             with(tasksList[position]){
-                binding.taskNumberTv.text = context.getString(R.string.task_title, id, count)
+                binding.taskNumberTv.text = when(taskType) {
+                    TaskType.Inventory -> context.getString(R.string.inventory_task_title, id, count ?: 0)
+                    TaskType.Recount -> context.getString(R.string.recount_task_title, id, count ?: 0)
+                    TaskType.Certification -> context.getString(R.string.certification_task_title, id, count ?: 0)
+                    else -> context.getString(R.string.unknown_tasktype)
+                }
                 binding.taskResumeLineTv.text = context.getString(R.string.task_resume, lines,
                     SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(totalTime))
                 binding.taskStateTv.text = Utilities.getResumedState(taskState)

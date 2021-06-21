@@ -26,6 +26,70 @@
                 app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
+                android:id="@+id/deviceTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="30dp"
+                android:layout_marginTop="30dp"
+                android:text="@string/device"
+                android:textColor="?attr/colorSecondary"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/progressBarSync" />
+
+            <TextView
+                android:id="@+id/deviceAndroidIdTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/demo_device_id"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="@+id/deviceTv"
+                app:layout_constraintTop_toBottomOf="@+id/deviceTv" />
+
+            <TextView
+                android:id="@+id/deviceOwnerTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:text="@string/owner"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="@id/deviceAndroidIdTv"
+                app:layout_constraintTop_toBottomOf="@id/deviceAndroidIdTv" />
+
+            <TextView
+                android:id="@+id/deviceLastSyncTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:text="@string/last_synced_date"
+                app:drawableLeftCompat="@drawable/ic_baseline_sync_24"
+                app:layout_constraintStart_toStartOf="@+id/deviceOwnerTv"
+                app:layout_constraintTop_toBottomOf="@+id/deviceOwnerTv" />
+
+            <Button
+                android:id="@+id/syncDeviceBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="30dp"
+                android:text="@string/sync_now"
+                android:textSize="12sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/progressBarSync" />
+
+            <View
+                android:id="@+id/divider5"
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_marginTop="30dp"
+                android:background="?android:attr/listDivider"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/deviceLastSyncTv" />
+
+            <TextView
                 android:id="@+id/itemsTitleTv"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -35,7 +99,7 @@
                 android:textColor="?attr/colorSecondary"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/progressBarSync" />
+                app:layout_constraintTop_toBottomOf="@id/divider5" />
 
             <TextView
                 android:id="@+id/totalItemsTv"
@@ -65,7 +129,7 @@
                 android:text="@string/sync_now"
                 android:textSize="12sp"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/itemsTitleTv" />
+                app:layout_constraintTop_toBottomOf="@+id/divider5" />
 
             <View
                 android:id="@+id/divider2"
@@ -117,7 +181,7 @@
                 android:text="@string/sync_now"
                 android:textSize="12sp"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/tasksTitleTv" />
+                app:layout_constraintTop_toBottomOf="@+id/divider2" />
 
             <View
                 android:id="@+id/divider3"
@@ -147,40 +211,89 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 app:layout_constraintStart_toStartOf="@+id/totalItemsTv"
-                app:layout_constraintTop_toBottomOf="@id/bdLastExportTv"
-                tools:text="@string/demo_db_path" />
+                app:layout_constraintTop_toBottomOf="@id/bdLastExportTv" />
 
             <Button
                 android:id="@+id/bdExportBtn"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="148dp"
-                android:layout_marginEnd="16dp"
+                android:layout_marginEnd="30dp"
                 android:text="@string/export"
                 android:textSize="12sp"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/tasksTitleTv" />
+                app:layout_constraintTop_toBottomOf="@+id/divider3" />
 
             <View
                 android:id="@+id/divider4"
                 android:layout_width="0dp"
                 android:layout_height="1dp"
-                android:layout_marginTop="180dp"
+                android:layout_marginTop="30dp"
                 android:background="?android:attr/listDivider"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="1.0"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tasksLastSyncTv" />
+                app:layout_constraintTop_toBottomOf="@id/bdPathTv" />
 
             <TextView
                 android:id="@+id/bdLastExportTv"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:text="@string/last_exported"
+                android:drawableStart="@drawable/ic_baseline_history_24"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="@+id/itemsTitleTv"
                 app:layout_constraintTop_toBottomOf="@id/bdTitleTv" />
+
+            <TextView
+                android:id="@+id/uploadTestTitleTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="30dp"
+                android:layout_marginTop="30dp"
+                android:text="@string/upload_test"
+                android:textColor="?attr/colorSecondary"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@id/divider4" />
+
+            <TextView
+                android:id="@+id/testPathTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                app:layout_constraintStart_toStartOf="@+id/totalItemsTv"
+                app:layout_constraintTop_toBottomOf="@id/lastTestTv" />
+
+            <Button
+                android:id="@+id/runTestBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="30dp"
+                android:text="@string/run"
+                android:textSize="12sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/divider4" />
+
+            <View
+                android:id="@+id/divider7"
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_marginTop="30dp"
+                android:background="?android:attr/listDivider"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="1.0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/testPathTv" />
+
+            <TextView
+                android:id="@+id/lastTestTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:drawableStart="@drawable/ic_baseline_history_24"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="@id/uploadTestTitleTv"
+                app:layout_constraintTop_toBottomOf="@id/uploadTestTitleTv" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

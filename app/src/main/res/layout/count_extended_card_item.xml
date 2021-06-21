@@ -14,7 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:paddingTop="5dp"
-        android:paddingBottom="5dp">
+        android:paddingBottom="10dp">
 
         <View
             android:id="@+id/divider"
@@ -25,17 +25,15 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ImageButton
-            android:id="@+id/deleteBtn"
-            style="@android:style/Widget.DeviceDefault.Light.ImageButton"
+        <TextView
+            android:id="@+id/taskIdTv"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintBottom_toBottomOf="@+id/quantityTv"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/quantityTv"
-            app:srcCompat="@drawable/ic_baseline_delete_24" />
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
+            android:text="TextView"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/divider" />
 
         <TextView
             android:id="@+id/descriptionTv"
@@ -54,12 +52,15 @@
             android:id="@+id/statusBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
             android:background="@android:color/transparent"
+            android:tint="#C12525"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/ic_baseline_cancel_24" />
+            app:layout_constraintTop_toBottomOf="@id/taskIdTv"
+            app:srcCompat="@drawable/ic_baseline_cancel_24"
+            tools:visibility="visible" />
 
         <TextView
             android:id="@+id/skuTv"
@@ -68,15 +69,15 @@
             android:layout_marginStart="8dp"
             android:text="15151"
             android:textStyle="bold"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintBottom_toBottomOf="@+id/statusBtn"
             app:layout_constraintStart_toEndOf="@id/statusBtn"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toBottomOf="@+id/taskIdTv" />
 
         <TextView
             android:id="@+id/quantityTv"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="10dp"
             android:ellipsize="end"
             android:lines="1"
             android:maxLength="6"
@@ -85,7 +86,7 @@
             android:singleLine="true"
             android:text="555"
             app:layout_constraintBottom_toBottomOf="@+id/descriptionTv"
-            app:layout_constraintEnd_toStartOf="@+id/deleteBtn"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/descriptionTv" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

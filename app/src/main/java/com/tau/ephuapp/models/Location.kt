@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import org.json.JSONArray
 import java.io.Serializable
 
 @Entity(indices = [Index("taskId")]/*, foreignKeys = [ForeignKey(entity = Task::class,
@@ -21,5 +22,7 @@ data class Location(
     var deep: Int? = null,
     var locationType: String? = null,
     var depotId: Int? = null,
-    var taskId: Int? = null
+    var taskId: Int? = null,
+    var details: String? = null,
+    var isEmpty: Boolean? = null
 ): Serializable

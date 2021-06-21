@@ -3,6 +3,8 @@ package com.tau.ephuapp.database.daos
 import androidx.room.*
 import com.tau.ephuapp.models.ItemCount
 import com.tau.ephuapp.models.Location
+import org.json.JSONArray
+
 @Dao
 interface TaskLocationDao {
     @Query("SELECT * FROM location")
@@ -26,6 +28,9 @@ interface TaskLocationDao {
     @Update()
     fun update(location: Location)
 
+    @Query("UPDATE location SET isempty = :isEmpty WHERE id = :locationId")
+    fun updateLocationAsEmpty(locationId: Int, isEmpty: Boolean)
+
     @Delete
     fun delete(location: Location)
 
@@ -35,9 +40,24 @@ interface TaskLocationDao {
     @Query("DELETE FROM location WHERE taskId = CAST(:taskId AS NUMERIC)")
     fun deleteAllByTask(taskId: Int)
 
+    @Query("DELETE FROM location WHERE taskId = CAST(:taskId AS NUMERIC) AND details IS NOT NULL")
+    fun deleteAllRecountByTask(taskId: Int)
+
     @Query("SELECT * FROM location WHERE id = CAST(:id AS NUMERIC)")
     fun getById(id: Int): Location
 
     @Query("SELECT * FROM itemcount WHERE locationId = CAST(:locationId AS NUMERIC) AND taskId = CAST(:taskId AS NUMERIC)")
     fun getLocationCounts(locationId: Int, taskId: Int): List<ItemCount>
+
+    @Query("SELECT details FROM location WHERE id = CAST(:locationId AS NUMERIC) AND taskId = CAST(:taskId AS NUMERIC)")
+    fun getLocationRecounts(locationId: Int, taskId: Int): String?
+
+    @Query("SELECT * FROM location WHERE taskId = CAST(:taskId AS NUMERIC) AND details IS NOT NULL  ORDER BY lane, columnAt, height ASC")
+    fun getAllRecountByTask(taskId: Int): List<Location>
+
+    @Query("SELECT COUNT(*) FROM location WHERE taskId = CAST(:taskId AS NUMERIC) AND details IS NOT NULL")
+    fun countAllRecountByTask(taskId: Int): Int
+
+    @Query("UPDATE location SET details = :details WHERE id = CAST(:locationId AS NUMERIC)")
+    fun updateDetails(details: String?, locationId: Int?): Int
 }

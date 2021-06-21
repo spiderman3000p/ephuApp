@@ -66,14 +66,16 @@ class UploadEditSingleCountWorker
                     }
                 } else if (call.code() == 200 || call.code() == 201 || call.code() == 202) {
                     val uploadedCount = call.body()
-                    val dataMap = mutableMapOf<String, Any>()
+                    val dataMap = mutableMapOf<String, Int?>()
                     Log.i(TAG, "upload edit count response: $uploadedCount")
-                    if(uploadedCount != null && pendingToUploadCount.id != uploadedCount.id) {
+                    if(uploadedCount != null && pendingToUploadCount.id != uploadedCount.id && uploadedCount.hasError == false) {
                         dataMap.put(uploadedCount.localId, uploadedCount.id)
                         db?.itemCountDao()?.delete(pendingToUploadCount)
                         db?.itemCountDao()?.insert(uploadedCount)
-                    } else {
-                        db?.itemCountDao()?.updateUpdated(uploadedCount?.localId!!)
+                    } else if(uploadedCount?.hasError == false){
+                        db?.itemCountDao()?.updateUpdated(uploadedCount.localId)
+                    } else if(uploadedCount?.hasError == true){
+                        db?.itemCountDao()?.updateUpdatedWithError(uploadedCount.errorMessage ?: applicationContext.getString(R.string.unknown_error), uploadedCount.localId)
                     }
                     val dataToReturn = Data.Builder().putAll(dataMap.toMap()).build()
                     return Result.success(dataToReturn)

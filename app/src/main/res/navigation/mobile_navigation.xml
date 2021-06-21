@@ -3,13 +3,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/nav_tasks">
+    app:startDestination="@+id/nav_inventory_tasks">
 
     <fragment
-        android:id="@+id/nav_tasks"
+        android:id="@+id/nav_inventory_tasks"
         android:name="com.tau.ephuapp.activities.main.ui.tasks.TasksFragment"
         android:label="@string/menu_tasks"
         tools:layout="@layout/fragment_tasks" />
+
+    <fragment
+        android:id="@+id/nav_counts"
+        android:name="com.tau.ephuapp.activities.main.ui.counts.CountsFragment"
+        android:label="@string/menu_counts"
+        tools:layout="@layout/fragment_counts" />
 
     <fragment
         android:id="@+id/nav_cert_tasks"

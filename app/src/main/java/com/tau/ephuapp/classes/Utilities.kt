@@ -5,12 +5,14 @@ import android.content.Context
 import android.content.DialogInterface
 import android.provider.Settings
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import com.google.android.gms.tasks.Tasks
+import com.tau.ephuapp.BuildConfig
 import com.tau.ephuapp.R
 import com.tau.ephuapp.models.TaskState
 import org.jetbrains.anko.runOnUiThread
+import java.lang.Exception
 
 class Utilities {
     companion object{
@@ -29,6 +31,10 @@ class Utilities {
 
         fun getAndroidId(context: Context): String{
             return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        }
+
+        fun getVersionName(): String? {
+            return BuildConfig.VERSION_NAME
         }
 
         fun getResumedState(taskState: TaskState?): CharSequence? {
@@ -51,7 +57,7 @@ class Utilities {
                 builder.setMessage(message)
                 builder.setPositiveButton("Aceptar", null)
                 val dialog: AlertDialog = builder.create()
-                dialog.show();
+                dialog.show()
             }
         }
 
@@ -60,7 +66,7 @@ class Utilities {
             title: String,
             message: String,
             positiveCallback: (() -> Unit)? = null,
-            negativeCallback: (() -> Unit)? = null,
+            negativeCallback: (() -> Unit)? = null
         ) {
             context.runOnUiThread {
                 val builder = AlertDialog.Builder(context)
@@ -72,12 +78,15 @@ class Utilities {
                     }
                     dialog.dismiss()
                 })
-                builder.setNegativeButton("Cancelar", DialogInterface.OnClickListener { dialog, id ->
-                    if (negativeCallback != null) {
-                        negativeCallback()
-                    }
-                    dialog.dismiss()
-                })
+                builder.setNegativeButton(
+                    "Cancelar",
+                    DialogInterface.OnClickListener { dialog, id ->
+                        if (negativeCallback != null) {
+                            negativeCallback()
+                        }
+                        dialog.dismiss()
+                    })
+                builder.setCancelable(false)
                 if (context is Activity && !context.isFinishing) {
                     val dialog: AlertDialog = builder.create()
                     dialog.show()
@@ -87,7 +96,12 @@ class Utilities {
 
         fun showToast(context: Context, message: String){
             context.runOnUiThread {
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                try {
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                }catch (e: Exception){
+                    e.printStackTrace()
+                    Log.e(TAG, "Excepcion al mostrar toast", e)
+                }
             }
         }
     }

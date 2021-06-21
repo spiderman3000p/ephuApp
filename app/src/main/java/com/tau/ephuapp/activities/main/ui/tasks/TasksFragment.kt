@@ -8,12 +8,15 @@ import android.text.format.DateUtils
 import android.util.Log
 import android.view.*
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
+import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.work.WorkInfo
 import com.tau.ephuapp.R
+import com.tau.ephuapp.activities.main.MainActivityViewModel
 import com.tau.ephuapp.adapters.TaskAdapter
 import com.tau.ephuapp.classes.Constants
 import com.tau.ephuapp.classes.Utilities
@@ -23,26 +26,34 @@ import com.tau.ephuapp.dialogs.TaskCountDialog
 import com.tau.ephuapp.interfaces.PopupMenuListener
 import com.tau.ephuapp.models.Task
 import com.tau.ephuapp.models.TaskState
+import com.tau.ephuapp.models.TaskType
 import com.tau.ephuapp.services.MyWorkerManagerService
 import org.jetbrains.anko.doAsync
 
 
 class TasksFragment : Fragment(), PopupMenuListener {
     private val TAG = "TASKS_FRAGMENT"
-    private lateinit var viewModel: TasksViewModel
+    private lateinit var viewModel: MainActivityViewModel
     private var mAdapter: TaskAdapter? = null
     private var filteredData = arrayListOf<Task>()
     private var _binding: FragmentTasksBinding? = null
     private val binding get() = _binding!!
     private lateinit var db: AppDatabase
+    //private lateinit var taskType: TaskType
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         _binding = FragmentTasksBinding.inflate(inflater, container, false)
-        binding.dateTv.text = DateUtils.formatDateTime(context, System.currentTimeMillis(), 0)
-        val _viewModel: TasksViewModel by activityViewModels()
+        binding.titleTv.text = getString(R.string.task_list_title, DateUtils.formatDateTime(context, System.currentTimeMillis(), 0), 0)
+        val taskType = null//TaskType.valueOf(arguments?.getString("taskType")!!)
+        activity?.actionBar?.title = when(taskType){
+            TaskType.Inventory -> getString(R.string.menu_inventory_tasks)
+            TaskType.Recount -> getString(R.string.menu_recount_tasks)
+            else -> getString(R.string.menu_tasks)
+        }
+        val _viewModel: MainActivityViewModel by activityViewModels()
         viewModel = _viewModel
         try {
             db = AppDatabase.getDatabase(requireContext())
@@ -56,10 +67,12 @@ class TasksFragment : Fragment(), PopupMenuListener {
         //viewModel = ViewModelProvider(this).get(TasksViewModel::class.java)
         viewModel.repository.fetchTasksList(requireContext())
         viewModel.tasksList.observe(viewLifecycleOwner, Observer { tasks ->
+            Log.i(TAG, "tareas observadas: $tasks")
             filteredData.clear()
             if(!tasks.isNullOrEmpty()) {
                 filteredData.addAll(tasks)
             }
+            binding.titleTv.text = getString(R.string.task_list_title, DateUtils.formatDateTime(context, System.currentTimeMillis(), 0), filteredData.size)
             mAdapter?.notifyDataSetChanged()
         })
         viewModel.savingCountsWorkProgress.observe(viewLifecycleOwner, {
@@ -67,7 +80,7 @@ class TasksFragment : Fragment(), PopupMenuListener {
                 if (WorkInfo.State.ENQUEUED == workInfo.state) {
                     Log.i(TAG, "progreso de subida de conteos observado...trabajo encolado")
                     binding.progressBar3.visibility = View.VISIBLE
-                    Utilities.showToast(requireContext(), getString(R.string.uploading_counts))
+                    //Utilities.showToast(requireContext(), getString(R.string.uploading_counts))
                 } else {
                     binding.progressBar3.visibility = View.INVISIBLE
                 }
@@ -79,7 +92,7 @@ class TasksFragment : Fragment(), PopupMenuListener {
                     } else if (workInfo.outputData.hasKeyWithValueOfType("error", String::class.java)) {
                         msg = workInfo.outputData.getString("error").toString()
                     }
-                    Utilities.showToast(requireContext(), msg)
+                    //Utilities.showToast(requireContext(), msg)
                 }
                 if (WorkInfo.State.FAILED == workInfo.state) {
                     Log.i(TAG, "progreso de subida de conteos observado...trabajo finalizado con error")
@@ -89,11 +102,11 @@ class TasksFragment : Fragment(), PopupMenuListener {
                     } else if (workInfo.outputData.hasKeyWithValueOfType("error", String::class.java)) {
                         msg = workInfo.outputData.getString("error").toString()
                     }
-                    Utilities.showToast(requireContext(), msg)
+                    //Utilities.showToast(requireContext(), msg)
                 }
                 if (WorkInfo.State.CANCELLED == workInfo.state) {
                     Log.i(TAG, "progreso de subida de conteos observado...trabajo cancelado")
-                    Utilities.showToast(requireContext(), getString(R.string.counts_uploading_cancelled))
+                    //Utilities.showToast(requireContext(), getString(R.string.counts_uploading_cancelled))
                 }
             }
         })
@@ -102,7 +115,7 @@ class TasksFragment : Fragment(), PopupMenuListener {
                 if (WorkInfo.State.ENQUEUED == workInfo.state) {
                     Log.i(TAG, "progreso de cambio de estado de tarea observado...trabajo encolado")
                     binding.progressBar3.visibility = View.VISIBLE
-                    Utilities.showToast(requireContext(), getString(R.string.changing_task_state))
+                    //Utilities.showToast(requireContext(), getString(R.string.changing_task_state))
                 } else {
                     binding.progressBar3.visibility = View.INVISIBLE
                 }
@@ -117,7 +130,7 @@ class TasksFragment : Fragment(), PopupMenuListener {
                         msg = getString(R.string.state_changed_successfully)
                     }
                     if(msg.isNotEmpty()){
-                        Utilities.showToast(requireContext(), msg)
+                        //Utilities.showToast(requireContext(), msg)
                     }
                 }
                 if (WorkInfo.State.FAILED == workInfo.state) {
@@ -128,16 +141,20 @@ class TasksFragment : Fragment(), PopupMenuListener {
                     } else if (workInfo.outputData.hasKeyWithValueOfType("error", String::class.java)) {
                         msg = workInfo.outputData.getString("error").toString()
                     }
-                    Utilities.showToast(requireContext(), msg)
+                    //Utilities.showToast(requireContext(), msg)
                 }
                 if (WorkInfo.State.CANCELLED == workInfo.state) {
                     Log.i(TAG, "progreso de cambio de estado de tarea observado...trabajo cancelado")
-                    Utilities.showToast(requireContext(), getString(R.string.state_change_cancelled))
+                    //Utilities.showToast(requireContext(), getString(R.string.state_change_cancelled))
                 }
             }
         })
         initAdapter()
         return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
     }
 
     private fun initAdapter(){

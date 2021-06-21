@@ -42,9 +42,9 @@ class DeleteCountWorker
             Log.i(TAG, "conteo recibido con exito")
             val pendingToDeleteCount = Gson().fromJson(inputData.getString("countJSON"), ItemCount::class.java)
             Log.i(TAG, "conteo: $pendingToDeleteCount")
-            if(pendingToDeleteCount.uploaded == false){
+            if(!pendingToDeleteCount.uploaded){
                 return Result.failure(workDataOf(
-                        "error" to appContext.getString(R.string.error_deleting_not_uploaded_count)
+                    "error" to appContext.getString(R.string.error_deleting_not_uploaded_count)
                 ))
             }
             val dataService: MyDataService = MyClient.getInstance(appContext).create(MyDataService::class.java)

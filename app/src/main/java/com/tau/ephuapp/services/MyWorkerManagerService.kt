@@ -7,6 +7,7 @@ import com.google.gson.Gson
 import com.tau.ephuapp.classes.*
 import com.tau.ephuapp.models.ItemCount
 import com.tau.ephuapp.models.TaskState
+import org.jetbrains.anko.doAsync
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -18,29 +19,11 @@ class MyWorkerManagerService {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        fun enqueCountToUploadWork(context: Context, count: ItemCount){
-            Log.i(TAG, "encolando work para subir count $count")
-            val countJSON = Gson().toJson(count)
-            val data = workDataOf(
-                "countJSON" to countJSON
-            )
-            val uploadWorkRequest =
-                OneTimeWorkRequestBuilder<UploadSingleCountWorker>()
-                    .setConstraints(constraints)
-                    .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS)
-                    .addTag("uploadCountRequest-${count.localId}")
-                    .setInputData(data)
-                    .build()
-            WorkManager
-                .getInstance(context)
-                .enqueueUniqueWork("uploadCountRequest-${count.localId}", ExistingWorkPolicy.APPEND_OR_REPLACE, uploadWorkRequest)
-        }
-
         fun enqueEditCountToUploadWork(context: Context, count: ItemCount){
             Log.i(TAG, "encolando work para subir edicion de count $count")
             val countJSON = Gson().toJson(count)
             val data = workDataOf(
-                    "countJSON" to countJSON
+                "countJSON" to countJSON
             )
             Log.i(TAG, "data enviada al work de editar conteo: $data")
             val uploadWorkRequest =
@@ -74,11 +57,37 @@ class MyWorkerManagerService {
                     .enqueueUniqueWork("deleteCountRequest-${count.localId}", ExistingWorkPolicy.REPLACE, uploadWorkRequest)
         }
 
-        fun enqueCountToUploadArrayWork(context: Context, counts: List<ItemCount>, tag: String){
-            Log.i(TAG, "encolando work para subir lista de counts $counts")
-            val countsJSON = Gson().toJson(counts)
+        fun enqueCountToUploadArrayWork(context: Context, newCountsToSave: List<ItemCount>, taskId: Int, tag: String){
+            Log.i(TAG, "encolando work para subir lista de counts $newCountsToSave")
+            if(newCountsToSave.size > 50) {
+                var from = 0
+                var to = 49
+                doAsync {
+                    while (true) {
+                        if (from == newCountsToSave.size - 1) {
+                            break
+                        }
+                        enqueCountsToUpload(context, taskId, newCountsToSave.subList(from, to), tag)
+                        from = to + 1
+                        to = if (to + 50 >= newCountsToSave.size) {
+                            newCountsToSave.size - 1
+                        } else {
+                            to + 50
+                        }
+                        Thread.sleep(5000)
+                    }
+                }
+            } else {
+                enqueCountsToUpload(context, taskId, newCountsToSave, tag)
+            }
+        }
+
+        private fun enqueCountsToUpload(context: Context, taskId: Int, counts: List<ItemCount>, tag: String){
             val data = workDataOf(
-                "countsJSON" to countsJSON
+                "counts" to counts.map {
+                    it.localId
+                }.toTypedArray(),
+                "taskId" to taskId
             )
             Log.i(TAG, "data enviada al work de subir conteos: $data")
             val uploadWorkRequest =
@@ -90,7 +99,7 @@ class MyWorkerManagerService {
                     .build()
             WorkManager
                 .getInstance(context)
-                .enqueueUniqueWork(tag, ExistingWorkPolicy.REPLACE, uploadWorkRequest)
+                .enqueueUniqueWork(tag, ExistingWorkPolicy.APPEND, uploadWorkRequest)
         }
 
         fun enqueChangeTaskStateWork(context: Context, taskId: Int, state: TaskState, tag: String){
@@ -109,7 +118,29 @@ class MyWorkerManagerService {
                             .build()
             WorkManager
                     .getInstance(context)
-                    .enqueueUniqueWork(tag, ExistingWorkPolicy.REPLACE, uploadWorkRequest)
+                    .enqueueUniqueWork(tag, ExistingWorkPolicy.APPEND, uploadWorkRequest)
+        }
+
+        fun enqueChangeLocationIsEmptyWork(context: Context, counts: List<ItemCount>, taskId: Int, locationId: Int, isEmpty: Boolean, tag: String){
+            Log.i(TAG, "encolando work para cambiar isEmpty de la ubicacion $locationId de la tarea $taskId a $isEmpty")
+            val countsJSON = Gson().toJson(counts)
+            val data = workDataOf(
+                "taskId" to taskId,
+                "isEmpty" to isEmpty,
+                "locationId" to locationId,
+                "countsJSON" to countsJSON
+            )
+            Log.i(TAG, "data enviada al work de cambiar isEmpty de ubicacion $locationId de la tarea $taskId: $data")
+            val uploadWorkRequest =
+                OneTimeWorkRequestBuilder<ChangeLocationIsEmptyWorker>()
+                    .setConstraints(constraints)
+                    .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS)
+                    .addTag(tag)
+                    .setInputData(data)
+                    .build()
+            WorkManager
+                .getInstance(context)
+                .enqueueUniqueWork(tag, ExistingWorkPolicy.APPEND, uploadWorkRequest)
         }
     }
 }

@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:animateLayoutChanges="true">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
@@ -78,7 +79,7 @@
                     android:text="@string/mark_empty_location"
                     android:textColor="?attr/colorSecondary"
                     android:textStyle="bold"
-                    tools:visibility="visible" />
+                    tools:visibility="gone" />
 
                 <LinearLayout
                     android:id="@+id/editLy"
@@ -153,7 +154,7 @@
                                 android:drawableRight="@drawable/ic_baseline_control_point_24"
                                 android:focusable="true"
                                 android:imeOptions="actionSend"
-                                android:inputType="number"
+                                android:inputType="number|numberDecimal"
                                 android:lines="1"
                                 android:maxLines="1"
                                 android:minLines="1"
@@ -177,26 +178,49 @@
                             app:useCompatPadding="false" />
                     </LinearLayout>
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/descriptionContainer"
+                    <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:enabled="false"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"
-                        android:hint="@string/description"
-                        app:boxBackgroundColor="#FFFFFF"
-                        tools:visibility="gone">
+                        android:layout_height="match_parent"
+                        android:layout_gravity="top"
+                        android:foregroundGravity="top"
+                        android:gravity="top"
+                        android:orientation="horizontal">
 
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/descriptionEt"
-                            android:layout_width="match_parent"
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/descriptionContainer"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:inputType="textMultiLine|textPersonName|textImeMultiLine"
-                            android:lines="2"
-                            android:maxLines="2"
-                            android:selectAllOnFocus="true" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                            android:layout_weight="1"
+                            android:enabled="false"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:hint="@string/description"
+                            app:boxBackgroundColor="#FFFFFF"
+                            tools:visibility="visible">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/descriptionEt"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="#FFFFFF"
+                                android:inputType="textMultiLine|textPersonName|textImeMultiLine"
+                                android:lines="2"
+                                android:maxLines="2"
+                                android:selectAllOnFocus="true" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <TextView
+                            android:id="@+id/packagingTv"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|fill_vertical"
+                            android:layout_weight="0.4"
+                            android:foregroundGravity="top"
+                            android:gravity="top"
+                            android:padding="5dp"
+                            android:text="@string/demo_packaging" />
+
+                    </LinearLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/lotContainer"
@@ -212,6 +236,7 @@
                             android:id="@+id/lotEt"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:drawableEnd="@drawable/ic_baseline_camera_alt_24"
                             android:inputType="textPersonName" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -229,6 +254,7 @@
                             android:id="@+id/lpnEt"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:drawableEnd="@drawable/ic_baseline_camera_alt_24"
                             android:inputType="textPersonName" />
                     </com.google.android.material.textfield.TextInputLayout>
 

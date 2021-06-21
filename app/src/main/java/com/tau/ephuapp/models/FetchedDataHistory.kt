@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 import java.io.Serializable
 
 enum class HistoryType{
-    ITEMS, TASKS, DEVICES, LOCATIONS
+    ITEMS, TASKS, DEVICES, LOCATIONS, LOCATIONS_RECOUNT
 }
 @Entity()
 data class FetchedDataHistory(

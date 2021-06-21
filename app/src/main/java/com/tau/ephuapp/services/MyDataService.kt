@@ -48,7 +48,7 @@ interface MyDataService {
     @Headers("Content-Type: application/json")
     fun editTaskState(
             @Url url: String
-    ): Call<Void>
+    ): Call<ChangeTaskStateResponse>
 
     @POST
     @Headers("Content-Type: application/json")

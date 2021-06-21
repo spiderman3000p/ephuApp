@@ -8,9 +8,7 @@ import android.util.Log
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.hasKeyWithValueOfType
-import androidx.work.workDataOf
 import com.google.gson.Gson
-import com.tau.ephuapp.R
 import com.tau.ephuapp.database.AppDatabase
 import com.tau.ephuapp.models.ItemCount
 import com.tau.ephuapp.models.TaskState
@@ -19,11 +17,11 @@ import com.tau.ephuapp.services.MyClient
 import java.io.IOException
 import java.net.SocketTimeoutException
 
-class ChangeTaskStateWorker
+class ChangeLocationIsEmptyWorker
     (val appContext: Context,
     val workerParams: WorkerParameters
 ) : Worker(appContext, workerParams) {
-    private val TAG = "CHANGE_TASK_STATE_WORKER"
+    private val TAG = "CHANGE_LOCATION_IS_EMPTY_WORKER"
     private val MAX_REINTENT = 3
     private var failedRequestsCounter = 0
     var db: AppDatabase? = null
@@ -40,64 +38,55 @@ class ChangeTaskStateWorker
         }
         Log.i(TAG, "input data: $inputData")
         if (inputData.hasKeyWithValueOfType<Int>("taskId") &&
-                inputData.hasKeyWithValueOfType<String>("state")) {
-            Log.i(TAG, "tarea de cambio de estado recibida con exito")
+            inputData.hasKeyWithValueOfType<Int>("locationId") &&
+            inputData.hasKeyWithValueOfType<Boolean>("isEmpty") &&
+            inputData.hasKeyWithValueOfType<String>("countsJSON")) {
             val taskId = inputData.getInt("taskId", 0)
-            val state = inputData.getString("state")
-            Log.i(TAG, "tarea: $taskId, state: $state")
+            val locationId = inputData.getInt("locationId", 0)
+            val countsJSON = inputData.getString("countsJSON")
+            val counts = Gson().fromJson(countsJSON, Array<ItemCount>::class.java).toList()
+            val isEmpty = inputData.getBoolean("isEmpty", false)
+            Log.i(TAG, "tarea de cambio de isEmpty a $isEmpty de la ubicacion$locationId de la tarea $taskId recibida con exito")
+            Log.i(TAG, "countsJSON: $countsJSON")
             val dataService: MyDataService = MyClient.getInstance(appContext).create(MyDataService::class.java)
             try {
-                val url = "inventories/task/changeState?newState=$state&taskId=$taskId"
-                //val url = "inventories/task/$taskId/${state?.toLowerCase()}"
-                val call = dataService.editTaskState(url).execute()
+                val call = dataService.saveCounts(counts).execute()
                 if (call.code() == 500 || call.code() == 400 || call.code() == 404 || call.code() == 403 || call.code() == 401) {
-                    Log.e(TAG, "change task state error response: ${call.errorBody()}")
-                    return when {
-                        call.body()?.errorCode == "008" -> {
-                             Result.success(
-                                workDataOf(
-                                    "error" to appContext.getString(R.string.state_change_error)
-                                )
-                             )
-                        }
-                        failedRequestsCounter < MAX_REINTENT -> {
-                            Log.i(TAG, "reintendando cambio de estado de tarea $taskId a $state...")
-                            failedRequestsCounter++
-                            Result.retry()
-                        }
-                        else -> {
-                            Log.i(TAG, "el estado de la tarea $taskId no pudo ser cambiado a $state")
-                            Result.failure()
-                        }
+                    Log.e(TAG, "change isEmpty error response: ${call.errorBody()}")
+                    return if (failedRequestsCounter < MAX_REINTENT) {
+                        Log.i(TAG, "reintendando cambio de isEmpty a la ubicacion $locationId de la tarea $taskId a $isEmpty...")
+                        failedRequestsCounter++
+                        Result.retry()
+                    } else {
+                        Log.i(TAG, "el isEmpty de la ubicacion $locationId de la tarea $taskId no pudo ser cambiado a $isEmpty")
+                        Result.failure()
                     }
                 } else if (call.code() == 200 || call.code() == 201 || call.code() == 202) {
                     return Result.success()
                 }
             } catch(toe: SocketTimeoutException) {
-                Log.e(TAG, "Network error when changing task $taskId state to $state", toe)
+                Log.e(TAG, "Network error when changing isEmpty de la ubicacion $locationId de la tarea $taskId to $isEmpty", toe)
                 return if (failedRequestsCounter < MAX_REINTENT) {
-                    Log.i(TAG, "reintentando cambio de estado de tarea $taskId a $state...")
+                    Log.i(TAG, "reintendando cambio de isEmpty a la ubicacion $locationId de la tarea $taskId a $isEmpty...")
                     failedRequestsCounter++
                     Result.retry()
                 } else {
-                    Log.e(TAG, "fallo al cambiar estado de la tarea $taskId a $state!")
+                    Log.e(TAG, "fallo al cambiar el isEmpty de la ubicacion $locationId de la tarea $taskId a $isEmpty!")
                     Result.failure()
                 }
             } catch (ioEx: IOException) {
-                Log.e(TAG,
-                    "Network error when changing task $taskId state to $state",
-                    ioEx)
+                Log.e(TAG, "Network error when changing isEmpty de la ubicacion $locationId de la tarea $taskId to $isEmpty", ioEx)
                 return if (failedRequestsCounter < MAX_REINTENT) {
-                    Log.i(TAG, "reintentando cambiar el estado de la tarea $taskId a $state...")
+                    Log.i(TAG, "reintendando cambio de isEmpty a la ubicacion $locationId de la tarea $taskId a $isEmpty...")
                     failedRequestsCounter++
                     Result.retry()
                 } else {
-                    Log.e(TAG, "fallo el cambio de estado de la tarea $taskId a $state!")
+                    Log.e(TAG, "fallo al cambiar el isEmpty de la ubicacion $locationId de la tarea $taskId a $isEmpty!")
                     Result.failure()
                 }
             }
         }
-        Log.e(TAG, "No se recibio la tarea y/o el estado")
+        Log.e(TAG, "No se recibieron los datos necesarios")
         return Result.failure()
     }
 }

@@ -8,12 +8,16 @@ import java.io.Serializable
 enum class TaskState{
     Complete, Paused, Active, Cancelled, Pending, WorkInProgress
 }
+enum class TaskType{
+    Recount, Certification, Inventory
+}
 @Entity
 data class Task(
     @PrimaryKey
     var id: Int = 0,
     var name: String? = null,
     var taskState: TaskState? = null,
+    var taskType: TaskType? = null,
     var device: String? = null,
     var totalTime: Long = 0,
     var lines: Int? = null,

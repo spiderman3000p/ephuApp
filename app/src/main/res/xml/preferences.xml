@@ -19,5 +19,12 @@
             android:key="base_url"
             app:useSimpleSummaryProvider="true"
             android:title="@string/base_url" />
+        <EditTextPreference
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:key="password"
+            android:title="@string/password"
+            android:visibility="visible"
+            app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
 </PreferenceScreen>

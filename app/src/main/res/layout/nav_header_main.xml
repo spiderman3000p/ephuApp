@@ -63,4 +63,14 @@
         app:drawableLeftCompat="@drawable/ic_baseline_sync_24"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/syncedDataLabelTv" />
+
+    <TextView
+        android:id="@+id/appVersionTv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="V1.1.1"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="@+id/lastSyncLabelTv"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/lastSyncLabelTv" />
 </androidx.constraintlayout.widget.ConstraintLayout>

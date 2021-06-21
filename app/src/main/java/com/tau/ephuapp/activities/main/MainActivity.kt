@@ -13,11 +13,11 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.lifecycle.Observer
 import androidx.navigation.ui.setupWithNavController
 import com.tau.ephuapp.R
 import com.tau.ephuapp.activities.IntroActivity
-import com.tau.ephuapp.activities.main.ui.tasks.TasksViewModel
 import com.tau.ephuapp.classes.Utilities
 import com.tau.ephuapp.database.AppDatabase
 import com.tau.ephuapp.databinding.ActivityMainBinding
@@ -32,7 +32,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private val TAG = "MAIN_ACTIVITY"
     private lateinit var appBarConfiguration: AppBarConfiguration
     private val viewModel: MainActivityViewModel by viewModels()
-    private val viewModelTasks: TasksViewModel by viewModels()
     private var device: Device? = null
     private lateinit var binding: ActivityMainBinding
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,7 +48,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         appBarConfiguration = AppBarConfiguration(setOf(
-            R.id.nav_tasks, R.id.nav_cert_tasks, R.id.nav_sync_master
+            R.id.nav_inventory_tasks, R.id.nav_cert_tasks, R.id.nav_sync_master
         ), binding.drawerLayout)
         setupActionBarWithNavController(navController, appBarConfiguration)
         binding.navView.setupWithNavController(navController)
@@ -60,6 +59,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             finish()
             return
         }
+        if (!sharedPref.contains("password")) {
+            sharedPref.edit {
+                "password" to "12345"
+            }
+        }
         viewModel.repository.fetchOwnerData(this)
         viewModel.device.observe(this, Observer{
             if (it != null){
@@ -67,7 +71,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 val usernameTv: TextView = header.findViewById(R.id.userNameTv)
                 usernameTv.text = device?.ownerName
                 if (device?.ownerId != null) {
-                    viewModelTasks.repository.fetchItems(this, device?.ownerId!!)
+                    viewModel.repository.fetchItems(this, device?.ownerId!!)
                 } else {
                     Utilities.showAlert(this, getString(R.string.error), getString(R.string.empty_owner_error_msg))
                 }
@@ -75,11 +79,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 Utilities.showAlert(this,getString(R.string.error),getString(R.string.device_data_empty_error_msg))
             }
         })
-        viewModelTasks.tasksList.observe(this, {
+        viewModel.tasksList.observe(this, {
             Log.i(TAG, "tareas observadas en main activity: $it")
             updateSyncDataInHeader()
         })
-        viewModelTasks.repository.getItemsLoaded().observe(this, {
+        viewModel.repository.getItemsLoaded().observe(this, {
             Log.i(TAG, "items cargados: $it")
             updateSyncDataInHeader()
         })
@@ -93,12 +97,14 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             val header = binding.navView.getHeaderView(0)
             val syncedDataLabelTv: TextView = header.findViewById(R.id.syncedDataLabelTv)
             val lastSyncLabelTv: TextView = header.findViewById(R.id.lastSyncLabelTv)
+            val appVersionTv: TextView = header.findViewById(R.id.appVersionTv)
             val datetime = SimpleDateFormat(
                 "yyyy-MM-dd HH:mm:ss",
                 Locale.getDefault()
             ).format(System.currentTimeMillis())
-            val taskCount = viewModelTasks.tasksList.value?.size ?: 0
+            val taskCount = viewModel.tasksList.value?.size ?: 0
             uiThread {
+                appVersionTv.text = getString(R.string.app_version, Utilities.getVersionName())
                 syncedDataLabelTv.text =
                     getString(R.string.synced_data_label, taskCount, itemCount)
                 lastSyncLabelTv.text = getString(R.string.last_sync_date, datetime)
