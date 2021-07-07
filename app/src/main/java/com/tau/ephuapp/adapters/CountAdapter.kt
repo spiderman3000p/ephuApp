@@ -61,6 +61,7 @@ class CountAdapter(
                 binding.skuTv.text = sku ?: ""
                 binding.descriptionTv.text = description ?: ""
                 binding.quantityTv.text = (quantity).toString()
+                binding.statusBtn.visibility = View.GONE
                 if(recount){
                     binding.deleteBtn.visibility = View.GONE
                 }

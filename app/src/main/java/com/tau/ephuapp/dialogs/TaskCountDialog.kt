@@ -345,8 +345,18 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             val DRAWABLE_RIGHT = 2
             val DRAWABLE_BOTTOM = 3
             if (event.action == MotionEvent.ACTION_UP) {
-                if (event.rawX >= (binding?.quantityEt?.getRight() ?: 0) - (binding?.quantityEt?.getCompoundDrawables()?.get(DRAWABLE_RIGHT)?.bounds?.width() ?: 0)) {
-                    startActivityForResult(Intent(requireContext(), CalculatorActivity::class.java), CALCULATOR)
+                val touchedPosition = event.rawX
+                val drawablePosition = (v.right + (binding?.skuEt?.right ?: 0)) -
+                    (binding?.quantityEt?.getCompoundDrawables()
+                    ?.get(DRAWABLE_RIGHT)?.bounds?.width() ?: 0)
+                Log.i(TAG, "drawable position: $drawablePosition")
+                Log.i(TAG, "touched position: $touchedPosition")
+                Log.i(TAG, "touched in drawable position?: ${touchedPosition >= drawablePosition}")
+                if (touchedPosition >= drawablePosition) {
+                    startActivityForResult(
+                        Intent(requireContext(), CalculatorActivity::class.java),
+                        CALCULATOR
+                    )
                     //ZxingOrient(this).initiateScan()
                     return@OnTouchListener true
                 }
@@ -361,7 +371,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             }
             true
         }
-        /*binding?.doneBtn?.setOnClickListener {
+        binding?.doneBtn?.setOnClickListener {
             if((totalPendingCounts + pendingToUpdate) > 0) {
                 showAlert(
                     requireContext(),
@@ -370,7 +380,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                     this::saveAllTaskCounts
                 )
             }
-        }*/
+        }
         binding?.emptySw?.setOnCheckedChangeListener { buttonView, isChecked ->
             Log.i(TAG, "on changed empty slide toogle. is checked: $isChecked")
             if(buttonView.isPressed) {
