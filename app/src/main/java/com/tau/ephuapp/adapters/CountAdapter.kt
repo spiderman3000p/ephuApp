@@ -52,7 +52,7 @@ class CountAdapter(
                     }
                     if(uploaded && dirty) {
                         Log.i(TAG, "el conteo $id en la posicion $position ha sido modificado")
-                        binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.design_default_color_secondary))
+                        binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.teal_201))
                     } else {
                         Log.i(TAG, "el conteo $id en la posicion $position esta normal")
                         binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.white))
@@ -64,7 +64,7 @@ class CountAdapter(
                 if(recount){
                     binding.deleteBtn.visibility = View.GONE
                 }
-                if(hasError == true || recount || dirty){
+                if(hasError == true || recount || dirty || uploaded){
                     if(hasError != true && (recount || dirty || uploaded)){
                         Log.i(TAG, "el conteo ${id} no tiene error")
                         if (uploaded) {
@@ -94,6 +94,7 @@ class CountAdapter(
                                     )
                                 }
                             }
+                            binding.statusBtn.visibility = View.VISIBLE
                         } else if(recount){
                             Log.i(TAG, "el conteo ${id} no ha sido subido y es un reconteo modificado")
                             binding.statusBtn.setImageDrawable(
@@ -112,6 +113,7 @@ class CountAdapter(
                             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                                 binding.statusBtn.foregroundTintList = getColorStateList(context, R.color.cp_state)
                             }
+                            binding.statusBtn.visibility = View.VISIBLE
                         }
                     } else if (hasError == true){
                         Log.i(TAG, "el conteo ${id} tiene un error")
@@ -122,13 +124,16 @@ class CountAdapter(
                         binding.statusBtn.setOnClickListener {
                             Utilities.showAlert(context, context.getString(R.string.error), errorMessage ?: context.getString(R.string.unknown_error))
                         }
+                        binding.statusBtn.visibility = View.VISIBLE
                     }
-                    binding.statusBtn.visibility = View.VISIBLE
                 } else {
                     binding.statusBtn.visibility = View.GONE
                 }
                 binding.statusBtn.setOnClickListener {
-                    Utilities.showAlert(context, context.getString(R.string.error), errorMessage ?: context.getString(R.string.unknown_error))
+                    if(hasError == true) {
+                        Utilities.showAlert(context, context.getString(R.string.error), errorMessage
+                                ?: context.getString(R.string.unknown_error))
+                    }
                 }
                 binding.deleteBtn.setOnClickListener {
                     if (!editing) {

@@ -19,10 +19,12 @@
     <uses-permission
         android:name="android.permission.CAMERA"
         android:required="true" />
-    <!--uses-permission
+    <!--
+uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="18" /-->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+        android:maxSdkVersion="18" /
+    -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <uses-feature
         android:glEsVersion="0x00020000"
@@ -53,17 +55,24 @@
         android:allowBackup="true"
         android:icon="@drawable/_78770"
         android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
         android:roundIcon="@drawable/_78770"
         android:supportsRtl="true"
-        android:requestLegacyExternalStorage="true"
         android:theme="@style/Theme.EphuApp">
-        <activity android:name=".activities.BarcodeScannerActivity"
-            android:label="@string/barcode_scanner"
+        <activity
+            android:name=".activities.CalculatorActivity"
+            android:label="@string/calculator"
+            android:screenOrientation="portrait">
+        </activity>
+        <activity
+            android:name=".activities.BarcodeScannerActivity"
             android:configChanges="orientation|keyboardHidden"
-            android:screenOrientation="portrait"></activity>
+            android:label="@string/barcode_scanner"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".activities.settings.SettingsActivity"
             android:label="@string/title_activity_settings" />
+
         <provider
             android:name="androidx.work.impl.WorkManagerInitializer"
             android:authorities="${applicationId}.workmanager-init"

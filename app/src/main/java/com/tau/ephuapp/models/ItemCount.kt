@@ -18,6 +18,7 @@ data class ItemCount(
     var ephuDeviceId: String? = null,// lo mismo
     var location: String? = null,// lo mismo
     var readTimestamp: String? = null,//
+    var lastUpdateTimestamp: String? = null,//
     var quantity: Float = 0f,// 0
     var lot: String? = null,// null
     var expiryDate: String? = null,// null

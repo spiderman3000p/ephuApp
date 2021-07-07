@@ -193,4 +193,6 @@
     <string name="saved_counts">Conteos Guardados</string>
     <string name="counts_list_title">%1$s (%2$d conteos)</string>
     <string name="menu_counts">Conteos</string>
+    <string name="zero_division_error">Error division por cero</string>
+    <string name="calculator">Calculadora</string>
 </resources>

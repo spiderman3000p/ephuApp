@@ -80,7 +80,7 @@ class UploadMultipleCountsWorker
                     try {
                         db?.runInTransaction {
                             uploadedCounts?.forEach { uploadedCount ->
-                                if(uploadedCount.hasError == false && uploadedCount.id != null) {
+                                if(uploadedCount.hasError != true && uploadedCount.id != null) {
                                     db?.itemCountDao()
                                         ?.updateUploaded(uploadedCount.localId, uploadedCount.id!!)
                                 } else {
@@ -108,6 +108,7 @@ class UploadMultipleCountsWorker
                                             itemCount.uploaded = true
                                             itemCount.sent = false
                                             itemCount.dirty = false
+                                            itemCount.hasError = foundUploadedItemCount.hasError
                                         }
                                         itemCount
                                     }

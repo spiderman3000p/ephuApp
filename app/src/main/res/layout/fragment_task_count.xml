@@ -36,7 +36,7 @@
         android:id="@+id/frameLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginBottom="90dp"
+        android:layout_marginBottom="55dp"
         android:padding="8dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
@@ -151,7 +151,7 @@
                                 android:id="@+id/quantityEt"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:drawableRight="@drawable/ic_baseline_control_point_24"
+                                android:drawableRight="@drawable/ic_baseline_calculate_24"
                                 android:focusable="true"
                                 android:imeOptions="actionSend"
                                 android:inputType="number|numberDecimal"
@@ -371,7 +371,7 @@
         android:layout_gravity="bottom"
         android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginBottom="65dp"
+        android:layout_marginBottom="16dp"
         android:text="@string/total_counts" />
 
     <Button
@@ -383,6 +383,6 @@
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="10dp"
         android:text="@string/save_pending_counts"
-        android:visibility="visible" />
+        android:visibility="gone" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

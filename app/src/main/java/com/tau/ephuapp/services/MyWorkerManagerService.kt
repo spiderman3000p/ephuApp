@@ -19,7 +19,7 @@ class MyWorkerManagerService {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        fun enqueEditCountToUploadWork(context: Context, count: ItemCount){
+        fun enqueEditCountToUploadWork(context: Context, count: ItemCount, tag: String? = null){
             Log.i(TAG, "encolando work para subir edicion de count $count")
             val countJSON = Gson().toJson(count)
             val data = workDataOf(
@@ -30,12 +30,12 @@ class MyWorkerManagerService {
                     OneTimeWorkRequestBuilder<UploadEditSingleCountWorker>()
                             .setConstraints(constraints)
                             .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS)
-                            .addTag("uploadEditCountRequest-${count.localId}")
+                            .addTag(tag ?: "uploadEditCountRequest-${count.localId}")
                             .setInputData(data)
                             .build()
             WorkManager
                     .getInstance(context)
-                    .enqueueUniqueWork("uploadEditCountRequest-${count.localId}", ExistingWorkPolicy.REPLACE, uploadWorkRequest)
+                    .enqueueUniqueWork(tag ?: "uploadEditCountRequest-${count.localId}", ExistingWorkPolicy.APPEND, uploadWorkRequest)
         }
 
         fun enqueDeleteCountWork(context: Context, count: ItemCount){
@@ -141,6 +141,19 @@ class MyWorkerManagerService {
             WorkManager
                 .getInstance(context)
                 .enqueueUniqueWork(tag, ExistingWorkPolicy.APPEND, uploadWorkRequest)
+        }
+
+        fun uploadPendingCounts(context: Context){
+            Log.i(TAG, "iniciando trabajo para buscar conteos no subidos")
+            val uploadWorkRequest =
+                    PeriodicWorkRequestBuilder<UploadFailedCountsWorker>(15, TimeUnit.MINUTES)
+                            .setConstraints(constraints)
+                            .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS)
+                            .addTag("uploadFailedCountsRequest")
+                            .build()
+            WorkManager
+                    .getInstance(context)
+                    .enqueueUniquePeriodicWork("uploadFailedCountsRequest", ExistingPeriodicWorkPolicy.REPLACE, uploadWorkRequest)
         }
     }
 }

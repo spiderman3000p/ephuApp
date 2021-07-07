@@ -96,9 +96,6 @@ class SyncMasterFragment : Fragment() {
         binding.bdExportBtn.setOnClickListener{
             exportDatabase()
         }
-        binding.runTestBtn.setOnClickListener{
-            runTest()
-        }
         binding.syncAllBtn.setOnClickListener {
             isSyncingAll = true
             binding.syncAllBtn.isEnabled = false
@@ -193,9 +190,6 @@ class SyncMasterFragment : Fragment() {
 
                 binding.bdLastExportTv.text = getString(R.string.last_exported, bdLastExported)
                 binding.bdPathTv.text = activity?.getDatabasePath("ephuapp_database")?.getAbsolutePath() ?: getString(R.string.unknown)
-
-                binding.lastTestTv.text = getString(R.string.last_runned, lastUploadTest)
-                binding.testPathTv.text =  testPath ?: getString(R.string.unknown)
             }
         }
     }

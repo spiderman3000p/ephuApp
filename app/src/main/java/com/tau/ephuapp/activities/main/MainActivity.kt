@@ -23,6 +23,7 @@ import com.tau.ephuapp.database.AppDatabase
 import com.tau.ephuapp.databinding.ActivityMainBinding
 import com.tau.ephuapp.models.Device
 import com.tau.ephuapp.services.MySettings
+import com.tau.ephuapp.services.MyWorkerManagerService
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
 import java.text.SimpleDateFormat
@@ -87,6 +88,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             Log.i(TAG, "items cargados: $it")
             updateSyncDataInHeader()
         })
+        MyWorkerManagerService.uploadPendingCounts(this)
     }
 
     private fun updateSyncDataInHeader(){

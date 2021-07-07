@@ -21,6 +21,9 @@ interface ItemCountDao {
     @Query("SELECT * FROM itemcount WHERE itemId = CAST(:itemId AS NUMERIC)")
     fun getAllByItem(itemId: Int): List<ItemCount>
 
+    @Query("SELECT * FROM itemcount WHERE uploaded = 0")
+    fun getAllPendingCountsAndRecountsToUpload(): List<ItemCount>
+
     @Query("SELECT * FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 0 AND sent = 0")
     fun getAllPendingToUploadByDevice(deviceId: String): List<ItemCount>
 
@@ -35,6 +38,9 @@ interface ItemCountDao {
 
     @Query("SELECT * FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 1 AND dirty = 1 AND sent = 0 AND recount = 1")
     fun getAllPendingRecountToUpdateByDevice(deviceId: String): List<ItemCount>
+
+    @Query("SELECT * FROM itemcount WHERE uploaded = 1 AND dirty = 1")
+    fun getAllPendingCountsAndRecountsToUpdate(): List<ItemCount>
 
     @Query("SELECT * FROM itemcount WHERE taskid = :taskId AND uploaded = 1 AND dirty = 1 AND sent = 0")
     fun getAllPendingToUpdateByTask(taskId: Int): List<ItemCount>

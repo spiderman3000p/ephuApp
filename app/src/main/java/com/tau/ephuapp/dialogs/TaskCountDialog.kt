@@ -28,6 +28,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.tau.ephuapp.R
 import com.tau.ephuapp.activities.BarcodeScannerActivity
+import com.tau.ephuapp.activities.CalculatorActivity
 import com.tau.ephuapp.activities.main.MainActivityViewModel
 import com.tau.ephuapp.adapters.CountAdapter
 import com.tau.ephuapp.classes.Constants
@@ -54,6 +55,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
     private val BARCODE_SCANNER = 99
     private val BARCODE_SCANNER_LOT = 100
     private val BARCODE_SCANNER_LPN = 101
+    private val CALCULATOR = 102
     // This property is only valid between onCreateView and
     // onDestroyView.
     private val binding get() = _binding
@@ -337,6 +339,20 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             }
             false
         })
+        binding?.quantityEt?.setOnTouchListener(OnTouchListener { v, event ->
+            val DRAWABLE_LEFT = 0
+            val DRAWABLE_TOP = 1
+            val DRAWABLE_RIGHT = 2
+            val DRAWABLE_BOTTOM = 3
+            if (event.action == MotionEvent.ACTION_UP) {
+                if (event.rawX >= (binding?.quantityEt?.getRight() ?: 0) - (binding?.quantityEt?.getCompoundDrawables()?.get(DRAWABLE_RIGHT)?.bounds?.width() ?: 0)) {
+                    startActivityForResult(Intent(requireContext(), CalculatorActivity::class.java), CALCULATOR)
+                    //ZxingOrient(this).initiateScan()
+                    return@OnTouchListener true
+                }
+            }
+            false
+        })
         binding?.quantityEt?.setOnEditorActionListener { v, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_DONE){
                 if(binding?.skuEt?.text?.isNotEmpty() == true){
@@ -345,7 +361,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             }
             true
         }
-        binding?.doneBtn?.setOnClickListener {
+        /*binding?.doneBtn?.setOnClickListener {
             if((totalPendingCounts + pendingToUpdate) > 0) {
                 showAlert(
                     requireContext(),
@@ -354,7 +370,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                     this::saveAllTaskCounts
                 )
             }
-        }
+        }*/
         binding?.emptySw?.setOnCheckedChangeListener { buttonView, isChecked ->
             Log.i(TAG, "on changed empty slide toogle. is checked: $isChecked")
             if(buttonView.isPressed) {
@@ -414,7 +430,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                     binding?.countsLabelTv?.visibility = View.GONE
                     binding?.currentLocationCountRv?.visibility = View.GONE
                     binding?.totalCountsTv?.visibility = View.GONE
-                    binding?.doneBtn?.visibility = View.GONE
+                    //binding?.doneBtn?.visibility = View.GONE
                     binding?.emptyLocationTv?.visibility = View.VISIBLE
                     binding?.emptySw?.isChecked = true
                     hideParametersViews()
@@ -423,7 +439,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                     binding?.countsLabelTv?.visibility = View.VISIBLE
                     binding?.currentLocationCountRv?.visibility = View.VISIBLE
                     binding?.totalCountsTv?.visibility = View.VISIBLE
-                    binding?.doneBtn?.visibility = View.VISIBLE
+                    //binding?.doneBtn?.visibility = View.VISIBLE
                     binding?.emptyLocationTv?.visibility = View.GONE
                     binding?.emptySw?.isChecked = false
                     renderTaskParameters()
@@ -477,7 +493,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                 binding?.editLayoutLabelTv?.text = getString(R.string.select_a_recount)
             } else {
                 binding?.skuEt?.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_baseline_camera_alt_24, 0)
-                binding?.quantityEt?.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_baseline_control_point_24, 0)
+                binding?.quantityEt?.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_baseline_calculate_24, 0)
                 binding?.skuEt?.isEnabled = true
                 binding?.quantityEt?.isEnabled = true
                 binding?.saveBtn?.isEnabled = true
@@ -569,10 +585,14 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                                         id = newRemoteId ?: dbItemCount?.id
                                         uploaded = dbItemCount?.uploaded ?: false
                                         sent = dbItemCount?.sent ?: false
-                                        hasError = dbItemCount?.hasError
+                                        hasError = dbItemCount?.hasError ?: false
                                         errorMessage = dbItemCount?.errorMessage
+                                        dirty = lastUpdateTimestamp != dbItemCount?.lastUpdateTimestamp ?: ""
                                     }
                                 }
+                            }
+                            uiThread {
+                                mAdapter?.notifyDataSetChanged()
                             }
                         }
                     }
@@ -624,7 +644,8 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                                         if (remoteId != null && currentLocationCounts[index].id != remoteId) {
                                             currentLocationCounts[index] = newItemCount
                                         } else {
-                                            currentLocationCounts[index].dirty = newItemCount.dirty
+                                            //currentLocationCounts[index].dirty = newItemCount.dirty
+                                            currentLocationCounts[index].dirty = currentLocationCounts[index].lastUpdateTimestamp != newItemCount.lastUpdateTimestamp
                                             currentLocationCounts[index].sent = newItemCount.sent
                                             currentLocationCounts[index].hasError = newItemCount.hasError
                                             currentLocationCounts[index].errorMessage = newItemCount.errorMessage
@@ -666,7 +687,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             binding?.countsLabelTv?.visibility = View.GONE
             binding?.currentLocationCountRv?.visibility = View.GONE
             binding?.totalCountsTv?.visibility = View.GONE
-            binding?.doneBtn?.visibility = View.GONE
+            //binding?.doneBtn?.visibility = View.GONE
             binding?.emptyLocationTv?.visibility = View.VISIBLE
             binding?.emptySw?.isChecked = isEmpty
             viewModel.currentLocation.value?.isEmpty = isEmpty
@@ -677,7 +698,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             binding?.countsLabelTv?.visibility = View.VISIBLE
             binding?.currentLocationCountRv?.visibility = View.VISIBLE
             binding?.totalCountsTv?.visibility = View.VISIBLE
-            binding?.doneBtn?.visibility = View.VISIBLE
+            //binding?.doneBtn?.visibility = View.VISIBLE
             binding?.emptyLocationTv?.visibility = View.GONE
             binding?.emptySw?.isChecked = isEmpty
             renderTaskParameters()
@@ -715,7 +736,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
         binding?.leftBtn?.visibility = View.GONE
         binding?.rightBtn?.visibility = View.GONE
         binding?.totalCountsTv?.visibility = View.GONE
-        binding?.doneBtn?.visibility = View.GONE
+        //binding?.doneBtn?.visibility = View.GONE
     }
 
     private fun showUi(){
@@ -723,7 +744,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
         binding?.leftBtn?.visibility = View.VISIBLE
         binding?.rightBtn?.visibility = View.VISIBLE
         binding?.totalCountsTv?.visibility = View.VISIBLE
-        binding?.doneBtn?.visibility = View.VISIBLE
+        //binding?.doneBtn?.visibility = View.VISIBLE
     }
 
     private fun loadTaskParameters(){
@@ -887,6 +908,7 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
         countToSave.location = location?.code
         countToSave.dirty = true
         countToSave.readTimestamp = DateTime().toLocalDateTime().toString()
+        countToSave.lastUpdateTimestamp = countToSave.readTimestamp
         countToSave.quantity = binding?.quantityEt?.text.toString().toFloat()
         // variable boolean values
         task?.parameters?.forEach { parameter ->
@@ -981,13 +1003,14 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                     viewModel.repository.setCurrentLocationCounts(it)
                 }
                 viewModel.repository.setCurrentItem(null)
-                //MyWorkerManagerService.enqueCountToUploadWork(requireContext(), item)
+                enqueCountsToUpload(listOf(itemCount))
             } else { // cuando se edita uno existente
                 mAdapter?.getItemAtPosition(isEditing)?.let { countToSave ->
                     val item = viewModel.currentItem.value
                     countToSave.dirty = true
                     countToSave.sent = false
                     countToSave.editing = false
+                    countToSave.lastUpdateTimestamp = DateTime().toLocalDateTime().toString()
                     if(task?.taskType == TaskType.Recount) {
                         countToSave.recount = true
                     }
@@ -1055,6 +1078,9 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
                         val recounts = currentLocationCounts
                         db.taskLocationsDao().updateDetails(Gson().toJson(recounts), location?.id!!)
                     }
+                    MyWorkerManagerService.enqueEditCountToUploadWork(
+                            requireContext(),
+                            itemCount!!)
                     viewModel.repository.setCurrentItem(null)
                     //mAdapter?.notifyDataSetChanged()
                     finishEditing(itemCount!!, isEditing)
@@ -1368,6 +1394,9 @@ class TaskCountDialog(var task: Task?) : DialogFragment() {
             binding?.lpnEt?.setText(barcode)
         } else if(resultCode == RESULT_OK && requestCode == BARCODE_SCANNER_LOT){
             binding?.lotEt?.setText(barcode)
+        } else if(resultCode == RESULT_OK && requestCode == CALCULATOR){
+            val result = data?.getDoubleExtra("result", 0.0) ?: 0.0
+            binding?.quantityEt?.setText(result.toString())
         } else if (resultCode != RESULT_OK && (requestCode == BARCODE_SCANNER || requestCode == BARCODE_SCANNER_LPN || requestCode == BARCODE_SCANNER_LOT)){
             showToast(requireContext(), getString(R.string.barcode_scanner_error))
         }
