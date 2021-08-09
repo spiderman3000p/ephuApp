@@ -62,15 +62,18 @@ uses-permission
         <activity
             android:name=".activities.CalculatorActivity"
             android:label="@string/calculator"
+            android:configChanges="orientation|keyboardHidden"
             android:screenOrientation="portrait">
         </activity>
         <activity
             android:name=".activities.BarcodeScannerActivity"
             android:configChanges="orientation|keyboardHidden"
-            android:label="@string/barcode_scanner"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:label="@string/barcode_scanner" />
         <activity
             android:name=".activities.settings.SettingsActivity"
+            android:configChanges="orientation|keyboardHidden"
+            android:screenOrientation="portrait"
             android:label="@string/title_activity_settings" />
 
         <provider
@@ -93,10 +96,14 @@ uses-permission
 
         <activity
             android:name=".activities.IntroActivity"
+            android:configChanges="orientation|keyboardHidden"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.EphuApp.NoActionBar" />
         <activity
             android:name=".activities.main.MainActivity"
             android:label="@string/app_name"
+            android:configChanges="orientation|keyboardHidden"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.EphuApp.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

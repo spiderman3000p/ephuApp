@@ -244,6 +244,58 @@
                 app:layout_constraintStart_toStartOf="@+id/itemsTitleTv"
                 app:layout_constraintTop_toBottomOf="@id/bdTitleTv" />
 
+            <TextView
+                android:id="@+id/pushPendingCountsTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="30dp"
+                android:layout_marginTop="30dp"
+                android:text="@string/push_pending_counts"
+                android:textColor="?attr/colorSecondary"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@id/divider4" />
+
+            <TextView
+                android:id="@+id/lastPendingCountsRevisionTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/last_pending_counts_revision"
+                app:layout_constraintStart_toStartOf="@+id/totalItemsTv"
+                app:layout_constraintTop_toBottomOf="@id/pendingCountsTv" />
+
+            <Button
+                android:id="@+id/forcePushCountsBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="30dp"
+                android:text="@string/push"
+                android:textSize="12sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/divider4" />
+
+            <View
+                android:id="@+id/divider6"
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_marginTop="30dp"
+                android:background="?android:attr/listDivider"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="1.0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/lastPendingCountsRevisionTv" />
+
+            <TextView
+                android:id="@+id/pendingCountsTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/pending_counts"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="@+id/itemsTitleTv"
+                app:layout_constraintTop_toBottomOf="@id/pushPendingCountsTv" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <Button

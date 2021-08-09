@@ -1,5 +1,6 @@
 package com.tau.ephuapp.activities.main.ui.settings
 
+import android.content.Context
 import android.content.DialogInterface
 import android.content.SharedPreferences
 import android.os.Bundle
@@ -7,6 +8,7 @@ import android.util.Log
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceManager
 import com.tau.ephuapp.R
 import com.tau.ephuapp.classes.Utilities
 import com.tau.ephuapp.services.MySettings
@@ -25,9 +27,15 @@ class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
 
     private fun checkPassword(password: String?) {
         Log.i(TAG, "password recibida: $password")
-        val sharedPref = context?.defaultSharedPreferences
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(requireContext())
+        Log.i(TAG, "hay clave en shared pref?: ${sharedPref?.contains("password")}")
+        Log.i(TAG, "clave en shared pref: ${sharedPref?.getString("password", "")}")
         if(sharedPref?.contains("password") == true && sharedPref.getString("password", "") == password) {
             setPreferencesFromResource(R.xml.preferences, mRootKey)
+        } else {
+            Utilities.showAlert(requireContext(), getString(R.string.error), getString(R.string.wrong_password_error_msg), {
+                showPrompt()
+            }, null, null, null, true, false)
         }
     }
 
@@ -43,13 +51,13 @@ class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
         Log.i(TAG, "la configuracion ha cambiado...")
         val value = sharedPreferences?.getString(key, "")
         Log.i(TAG, "nuevo valor para $key: $value")
-        MySettings.resetValues(requireContext())
+        //MySettings.resetValues(requireContext())
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         Log.i(TAG, "onSaveInstanceState")
-        MySettings.resetValues(requireContext())
+        //MySettings.resetValues(requireContext())
     }
 
     override fun onPause() {
@@ -74,7 +82,6 @@ class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
                     checkPassword(password)
                 })
                 .setNegativeButton(R.string.cancel) { dialog, id ->
-                    Utilities.showAlert(requireContext(), getString(R.string.error), getString(R.string.wrong_password_error_msg))
                     dialog?.cancel()
                 }
             builder.show()

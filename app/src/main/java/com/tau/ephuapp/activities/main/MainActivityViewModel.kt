@@ -3,21 +3,20 @@ package com.tau.ephuapp.activities.main
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.tau.ephuapp.classes.Constants
-import com.tau.ephuapp.models.Device
-import com.tau.ephuapp.models.Item
-import com.tau.ephuapp.models.Location
-import com.tau.ephuapp.models.Task
+import com.tau.ephuapp.models.*
 import com.tau.ephuapp.repositories.MainRepository
 
 class MainActivityViewModel(application: Application): AndroidViewModel(application){
     val repository = MainRepository()
     val tasksList: LiveData<ArrayList<Task>?> = repository.getTasks()
     val currentLocation: LiveData<Location?> = repository.getCurrentLocation()
-    //val currentLocationCounts: LiveData<ArrayList<ItemCount>> = repository.getCurrentLocationCounts()
+    //val filteredCounts = MutableLiveData<List<ItemCount>>()
+    val filterCountsInput = MutableLiveData<String>()
     val currentTaskLocations: LiveData<ArrayList<Location>?> = repository.getCurrentTaskLocations()
     val currentTask: LiveData<Task?> = repository.getCurrentTask()
     val currentItem: LiveData<Item?> = repository.getCurrentItem()

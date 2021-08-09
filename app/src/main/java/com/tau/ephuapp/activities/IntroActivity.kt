@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
+import androidx.preference.PreferenceManager
 import com.github.appintro.AppIntro
 import com.github.appintro.AppIntroFragment
 import com.github.appintro.AppIntroPageTransformerType
@@ -60,7 +61,7 @@ class IntroActivity : AppIntro() {
     }
 
     fun saveIntroDone() {
-        val sharedPref = getSharedPreferences(packageName, Context.MODE_PRIVATE)
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
         with(sharedPref.edit()) {
             putBoolean("firstRun", true)
             commit()

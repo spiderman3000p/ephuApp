@@ -22,7 +22,7 @@ class ChangeLocationIsEmptyWorker
     val workerParams: WorkerParameters
 ) : Worker(appContext, workerParams) {
     private val TAG = "CHANGE_LOCATION_IS_EMPTY_WORKER"
-    private val MAX_REINTENT = 3
+    private val MAX_REINTENT = -1
     private var failedRequestsCounter = 0
     var db: AppDatabase? = null
 
@@ -53,7 +53,7 @@ class ChangeLocationIsEmptyWorker
                 val call = dataService.saveCounts(counts).execute()
                 if (call.code() == 500 || call.code() == 400 || call.code() == 404 || call.code() == 403 || call.code() == 401) {
                     Log.e(TAG, "change isEmpty error response: ${call.errorBody()}")
-                    return if (failedRequestsCounter < MAX_REINTENT) {
+                    return if (MAX_REINTENT ==-1 || failedRequestsCounter < MAX_REINTENT) {
                         Log.i(TAG, "reintendando cambio de isEmpty a la ubicacion $locationId de la tarea $taskId a $isEmpty...")
                         failedRequestsCounter++
                         Result.retry()
@@ -66,7 +66,7 @@ class ChangeLocationIsEmptyWorker
                 }
             } catch(toe: SocketTimeoutException) {
                 Log.e(TAG, "Network error when changing isEmpty de la ubicacion $locationId de la tarea $taskId to $isEmpty", toe)
-                return if (failedRequestsCounter < MAX_REINTENT) {
+                return if (MAX_REINTENT ==-1 || failedRequestsCounter < MAX_REINTENT) {
                     Log.i(TAG, "reintendando cambio de isEmpty a la ubicacion $locationId de la tarea $taskId a $isEmpty...")
                     failedRequestsCounter++
                     Result.retry()
@@ -76,7 +76,7 @@ class ChangeLocationIsEmptyWorker
                 }
             } catch (ioEx: IOException) {
                 Log.e(TAG, "Network error when changing isEmpty de la ubicacion $locationId de la tarea $taskId to $isEmpty", ioEx)
-                return if (failedRequestsCounter < MAX_REINTENT) {
+                return if (MAX_REINTENT ==-1 || failedRequestsCounter < MAX_REINTENT) {
                     Log.i(TAG, "reintendando cambio de isEmpty a la ubicacion $locationId de la tarea $taskId a $isEmpty...")
                     failedRequestsCounter++
                     Result.retry()

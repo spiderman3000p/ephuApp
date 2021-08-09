@@ -13,6 +13,7 @@ import com.tau.ephuapp.R
 import com.tau.ephuapp.models.TaskState
 import org.jetbrains.anko.runOnUiThread
 import java.lang.Exception
+import java.util.*
 
 class Utilities {
     companion object{
@@ -57,7 +58,9 @@ class Utilities {
                 builder.setMessage(message)
                 builder.setPositiveButton("Aceptar", null)
                 val dialog: AlertDialog = builder.create()
-                dialog.show()
+                if (context is Activity && !context.isFinishing) {
+                    dialog.show()
+                }
             }
         }
 
@@ -66,26 +69,38 @@ class Utilities {
             title: String,
             message: String,
             positiveCallback: (() -> Unit)? = null,
-            negativeCallback: (() -> Unit)? = null
+            negativeCallback: (() -> Unit)? = null,
+            positiveText: String? = null,
+            negativeText: String? = null,
+            showPositiveBtn: Boolean = true,
+            showNegativeBtn: Boolean = true
         ) {
             context.runOnUiThread {
                 val builder = AlertDialog.Builder(context)
                 builder.setTitle(title)
                 builder.setMessage(message)
-                builder.setPositiveButton("Aceptar", DialogInterface.OnClickListener { dialog, id ->
-                    if (positiveCallback != null) {
-                        positiveCallback()
-                    }
-                    dialog.dismiss()
-                })
-                builder.setNegativeButton(
-                    "Cancelar",
-                    DialogInterface.OnClickListener { dialog, id ->
-                        if (negativeCallback != null) {
-                            negativeCallback()
-                        }
-                        dialog.dismiss()
-                    })
+                if(showPositiveBtn) {
+                    builder.setPositiveButton(
+                        (positiveText
+                            ?: getString(R.string.ok)).capitalize(Locale.getDefault()),
+                        DialogInterface.OnClickListener { dialog, id ->
+                            positiveCallback?.let {
+                                it()
+                            }
+                            dialog.dismiss()
+                        })
+                }
+                if(showNegativeBtn) {
+                    builder.setNegativeButton(
+                        (negativeText
+                            ?: getString(R.string.cancel)).capitalize(Locale.getDefault()),
+                        DialogInterface.OnClickListener { dialog, id ->
+                            negativeCallback?.let {
+                                it()
+                            }
+                            dialog.dismiss()
+                        })
+                }
                 builder.setCancelable(false)
                 if (context is Activity && !context.isFinishing) {
                     val dialog: AlertDialog = builder.create()

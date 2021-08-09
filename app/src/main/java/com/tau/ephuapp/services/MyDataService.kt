@@ -20,6 +20,12 @@ interface MyDataService {
 
     @GET
     @Headers("Content-Type: application/json")
+    fun getTaskCounts(
+        @Url url: String
+    ): Call<ArrayList<ItemCount>>
+
+    @GET
+    @Headers("Content-Type: application/json")
     fun getItems(
         @Url url: String
     ): Call<ArrayList<Item>>

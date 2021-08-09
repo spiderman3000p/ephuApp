@@ -12,6 +12,7 @@ import com.tau.ephuapp.models.*
 import com.tau.ephuapp.services.MyClient
 import com.tau.ephuapp.services.MyDataService
 import org.jetbrains.anko.doAsync
+import org.joda.time.DateTime
 import java.lang.Exception
 
 class MainRepository {
@@ -22,6 +23,7 @@ class MainRepository {
     private var currentItem = MutableLiveData<Item?>()
     private var currentTaskLocations = MutableLiveData<ArrayList<Location>?>()
     private var currentLocationCounts = MutableLiveData<ArrayList<ItemCount>>()
+    private var currentLocationRecountTasks = MutableLiveData<ArrayList<ItemCountTask>>()
     private var currentTask = MutableLiveData<Task?>()
     private var itemsLoaded = MutableLiveData<Boolean?>()
     private var isSavingCounts = MutableLiveData<Boolean?>()
@@ -124,6 +126,10 @@ class MainRepository {
         currentLocationCounts.postValue(counts)
     }
 
+    fun setCurrentLocationRecountTasks(tasks: ArrayList<ItemCountTask>) {
+        currentLocationRecountTasks.postValue(tasks)
+    }
+
     fun setIsSavingCounts(value: Boolean?) {
         isSavingCounts.postValue(value)
     }
@@ -147,6 +153,10 @@ class MainRepository {
 
     fun getCurrentLocationCounts(): LiveData<ArrayList<ItemCount>> {
         return currentLocationCounts
+    }
+
+    fun getCurrentLocationRecountTasks(): LiveData<ArrayList<ItemCountTask>> {
+        return currentLocationRecountTasks
     }
 
     // tasks fetching ...
@@ -201,6 +211,8 @@ class MainRepository {
                 db.tasksDao().deleteAll()
                 db.tasksParameterDao().deleteAll()
                 db.taskLocationsDao().deleteAll()
+                db.taskLocationsDao().deleteAll()
+                db.itemCountDao().deleteAll()
                 if(tasks.isNotEmpty()) {
                     db.tasksDao().insertAll(tasks)
                     val parameters = tasks.flatMap { task ->
@@ -211,6 +223,15 @@ class MainRepository {
                     }
                     if (!parameters.isNullOrEmpty()) {
                         db.tasksParameterDao().insertAll(parameters)
+                    }
+                    // obtener ubicaciones de las tareas
+                    tasks.forEach {task ->
+                        if(task.taskType == TaskType.Inventory) {
+                            fetchRemoteTaskLocations(context, task.id)
+                        } else if(task.taskType == TaskType.Recount) {
+                            fetchRemoteTaskLocationsRecount(context, task.id)
+                        }
+                        fetchRemoteTaskCounts(context, task.id)
                     }
                 }
                 tasksList.postValue(tasks)
@@ -225,10 +246,10 @@ class MainRepository {
     // end tasks fetching
 
     // task locations fetching
-    fun fetchTaskLocations(context: Context, taskId: Int){
+    fun fetchTaskLocations(context: Context, taskId: Int, forceRemote: Boolean = false){
         doAsync {
             Log.i(TAG, "fetching task locations for task $taskId...")
-            if (shouldFetchRemoteTaskLocations(context, taskId)) {
+            if (forceRemote || shouldFetchRemoteTaskLocations(context, taskId)) {
                 fetchRemoteTaskLocations(context, taskId)
             } else {
                 fetchLocalTaskLocations(context, taskId)
@@ -284,6 +305,7 @@ class MainRepository {
                 currentTaskLocations.postValue(orderedLocationsArrayList)
             }
         } catch (e: Exception){
+            e.printStackTrace()
             Log.e(TAG, "error al obtener ubicaciones del servidor ${e.message}")
             Utilities.showAlert(context, context.getString(R.string.error), context.getString(R.string.error_fetching_remote_locations))
             currentTaskLocations.postValue(null)
@@ -292,10 +314,10 @@ class MainRepository {
     // end task locations fetching
 
     // fetch task locations recount
-    fun fetchTaskLocationsRecount(context: Context, taskId: Int){
+    fun fetchTaskLocationsRecount(context: Context, taskId: Int, forceRemote: Boolean = false){
         doAsync {
             Log.i(TAG, "fetching task locations recount for task $taskId...")
-            if (shouldFetchRemoteTaskLocationsRecount(context, taskId)) {
+            if (forceRemote || shouldFetchRemoteTaskLocationsRecount(context, taskId)) {
                 fetchRemoteTaskLocationsRecount(context, taskId)
             } else {
                 fetchLocalTaskLocationsRecount(context, taskId)
@@ -341,6 +363,7 @@ class MainRepository {
                 // TODO: Eliminar en el futuro. Aqui se inyecta manualmente el id de la tarea relacionada, esto relentiza
                 locations.forEach { location ->
                     location.taskId = taskId
+                    location.id = location.locationId!!
                 }
                 if(locations.isNotEmpty()) {
                     db.taskLocationsDao().insertAll(locations)
@@ -358,15 +381,74 @@ class MainRepository {
     }
     // end task locations recount fetching
 
+    private fun shouldFetchRemoteTaskCounts(context: Context, taskId: Int): Boolean{
+        Log.i(TAG, "should fetch remote task counts for task $taskId?")
+        val db = AppDatabase.getDatabase(context)
+        val history = db.fetchedHistoryDao().getByTag(HistoryType.TASK_COUNTS.toString().plus("-${taskId}"))
+        Log.i(TAG, "local task counts history: $history")
+        val countsCount = db.itemCountDao().countAllByTask(taskId)
+        Log.i(TAG, "local task counts count: $countsCount")
+        val isFromToday = DateUtils.isToday(history?.lastUpdate ?: 0)
+        Log.i(TAG, "local locations recount is from today: $isFromToday")
+        return !isFromToday || (isFromToday && countsCount == 0)
+    }
+
+    private fun fetchRemoteTaskCounts(context: Context, taskId: Int){
+        Log.i(TAG, "fetching remote task locations for task $taskId...")
+        val client = MyClient.getInstance(context).create(MyDataService::class.java)
+        val url = "obtenerConteos/${taskId}"
+        try {
+            val call = client.getTaskCounts(url).execute()
+            val response = call.body()
+            Log.i(TAG, "respuesta fetching task counts: $response")
+            response?.let { counts ->
+                val db: AppDatabase = AppDatabase.getDatabase(context)
+                db.fetchedHistoryDao().insert(FetchedDataHistory(
+                    tag = HistoryType.COUNTS.toString().plus("-${taskId}"),
+                    lastUpdate = System.currentTimeMillis()
+                ))
+                db.itemCountDao().deleteAllByTaskId(taskId)
+                // TODO: Eliminar en el futuro. Aqui se inyecta manualmente el id de la tarea relacionada, esto relentiza
+                counts.forEach { count ->
+                    var item: Item? = null
+                    count.itemId?.let{itemId ->
+                        item = db.itemDao().getById(itemId)
+                        item?.let {
+                            count.sku = it.sku
+                            count.description = it.description
+                        }
+                    }
+                    count.lastUpdateTimestamp = count.lastUpdateTimestamp ?: DateTime.now().millis
+                    count.taskId = taskId
+                    count.uploaded = true
+                    count.dirty = false
+                    count.sent = false
+                    count.editing = false
+                }
+                if(counts.isNotEmpty()) {
+                    db.itemCountDao().insertAll(counts)
+                }
+            }
+        } catch (e: Exception){
+            Log.e(TAG, "error al obtener conteos del servidor ${e.message}")
+            Utilities.showAlert(context, context.getString(R.string.error), context.getString(R.string.error_fetching_remote_counts))
+            currentTaskLocations.postValue(null)
+        }
+    }
+    // end task counts fetching
+
     // fetch items
     fun fetchItems(context: Context, ownerId: Int, forceRemote: Boolean = false){
         doAsync {
             Log.i(TAG, "fetching items...")
             if (forceRemote || shouldFetchRemoteItems(context, ownerId)) {
                 fetchRemoteItems(context, ownerId)
+            } else {
+                fetchLocalItems(context)
             }
         }
     }
+
     private fun shouldFetchRemoteItems(context: Context, ownerId: Int): Boolean{
         Log.i(TAG, "should fetch remote items?")
         val db = AppDatabase.getDatabase(context)
@@ -377,6 +459,14 @@ class MainRepository {
         val isFromToday = DateUtils.isToday(history?.lastUpdate ?: 0)
         Log.i(TAG, "local items are from today: $isFromToday")
         return !isFromToday || (isFromToday && count == 0)
+    }
+
+    private fun fetchLocalItems(context: Context){
+        Log.i(TAG, "fetching local items...")
+        val db: AppDatabase = AppDatabase.getDatabase(context)
+        db.itemDao().getAll().let {
+            itemsLoaded.postValue(true)
+        }
     }
 
     private fun fetchRemoteItems(context: Context, ownerId: Int){

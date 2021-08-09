@@ -65,7 +65,6 @@ class TasksFragment : Fragment(), PopupMenuListener {
             Log.e(TAG, "Database error found", ex)
         }
         //viewModel = ViewModelProvider(this).get(TasksViewModel::class.java)
-        viewModel.repository.fetchTasksList(requireContext())
         viewModel.tasksList.observe(viewLifecycleOwner, Observer { tasks ->
             Log.i(TAG, "tareas observadas: $tasks")
             filteredData.clear()

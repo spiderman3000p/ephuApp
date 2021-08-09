@@ -15,13 +15,16 @@ import android.widget.Toast
 import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.work.WorkManager
 import com.kbj.androxlsxparser.mxlsxparser.StreamingReader
 import com.tau.ephuapp.R
 import com.tau.ephuapp.activities.main.MainActivityViewModel
+import com.tau.ephuapp.classes.Constants
 import com.tau.ephuapp.classes.Utilities
 import com.tau.ephuapp.database.AppDatabase
 import com.tau.ephuapp.databinding.FragmentSyncMasterBinding
 import com.tau.ephuapp.models.HistoryType
+import com.tau.ephuapp.services.MyWorkerManagerService
 import org.apache.poi.ss.usermodel.Workbook
 import org.jetbrains.anko.defaultSharedPreferences
 import org.jetbrains.anko.doAsync
@@ -39,6 +42,7 @@ class SyncMasterFragment : Fragment() {
     private var isSyncingDevice = false
     private var isSyncingItems = false
     private var isSyncingTasks = false
+    private var isCheckingForPendingCounts = false
     private var isSyncingAll = false
     private var deviceId: String = ""
     override fun onCreateView(
@@ -96,6 +100,9 @@ class SyncMasterFragment : Fragment() {
         binding.bdExportBtn.setOnClickListener{
             exportDatabase()
         }
+        binding.pushPendingCountsTv.setOnClickListener {
+            checkForPendingCounts()
+        }
         binding.syncAllBtn.setOnClickListener {
             isSyncingAll = true
             binding.syncAllBtn.isEnabled = false
@@ -125,6 +132,18 @@ class SyncMasterFragment : Fragment() {
         }
     }
 
+    private fun checkForPendingCounts(){
+        isCheckingForPendingCounts = true
+        binding.forcePushCountsBtn.isEnabled = false
+        //binding.progressBarSync.visibility = View.VISIBLE
+        doAsync {
+            WorkManager.getInstance().cancelAllWorkByTag(Constants.SAVING_COUNTS_PROGRESS)
+            Thread.sleep(2000)
+            MyWorkerManagerService.uploadPendingCounts(requireContext())
+            Utilities.showToast(requireContext(), getString(R.string.checking_for_pending_counts))
+        }
+    }
+
     private fun syncTask(){
         isSyncingTasks = true
         binding.syncTasksBtn.isEnabled = false
@@ -148,9 +167,10 @@ class SyncMasterFragment : Fragment() {
             val totalTasks = db.tasksDao().countAllByDevice(Utilities.getAndroidId(requireContext()))
             val tasksLastSync = db.fetchedHistoryDao().getByTag(HistoryType.TASKS.toString())
             val bdLastExported = activity?.defaultSharedPreferences?.getString("bdLastExported", null) ?: getString(R.string.never)
-            val lastUploadTest = activity?.defaultSharedPreferences?.getString("lastUploadTest", null) ?: getString(R.string.never)
-            val testPath = File(requireContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "test.xlsx").absolutePath
+            val lastPendingCountsRevision = db.fetchedHistoryDao().getByTag(HistoryType.LAST_PENDING_REVISION.toString())
+            val pendingCounts = db.itemCountDao().countAllPendingToUploadByDevice(deviceId)
             uiThread {
+                binding.forcePushCountsBtn.isEnabled = pendingCounts > 0
                 if(isSyncingAll && (!isSyncingItems && !isSyncingTasks && !isSyncingDevice)){
                     isSyncingAll = false
                     binding.syncAllBtn.isEnabled = true
@@ -190,6 +210,16 @@ class SyncMasterFragment : Fragment() {
 
                 binding.bdLastExportTv.text = getString(R.string.last_exported, bdLastExported)
                 binding.bdPathTv.text = activity?.getDatabasePath("ephuapp_database")?.getAbsolutePath() ?: getString(R.string.unknown)
+
+                binding.pendingCountsTv.text = getString(R.string.pending_counts, pendingCounts)
+                binding.lastPendingCountsRevisionTv.text = getString(
+                    R.string.last_pending_counts_revision, DateUtils.formatSameDayTime(
+                        lastPendingCountsRevision?.lastUpdate ?: 0,
+                        System.currentTimeMillis(),
+                        DateFormat.SHORT,
+                        DateFormat.SHORT
+                    )
+                )
             }
         }
     }

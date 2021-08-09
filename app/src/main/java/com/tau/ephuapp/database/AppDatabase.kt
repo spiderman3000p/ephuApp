@@ -8,13 +8,15 @@ import com.tau.ephuapp.database.daos.*
 import com.tau.ephuapp.models.*
 
 @Database(entities = [Task::class, PendingToUploadCertification::class, FetchedDataHistory::class,
-    Location::class, Device::class, Item::class, ItemCount::class, TaskParameter::class], version = 1)
+    Location::class, Device::class, Item::class, ItemCount::class, TaskParameter::class,
+    ItemCountTask::class], version = 1)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun tasksDao(): TaskDao
     abstract fun tasksParameterDao(): TaskParameterDao
     abstract fun taskLocationsDao(): TaskLocationDao
     abstract fun itemDao(): ItemDao
     abstract fun itemCountDao(): ItemCountDao
+    abstract fun itemCountTaskDao(): ItemCountTaskDao
     abstract fun deviceDao(): DeviceDao
     abstract fun pendingToUploadCertificationDao(): PendingToUploadCertificationDao
     abstract fun fetchedHistoryDao(): FetchedDataHistoryDao

@@ -13,46 +13,33 @@
     android:paddingBottom="20dp"
     android:theme="@style/ThemeOverlay.AppCompat.Dark">
 
-    <ImageView
-        android:id="@+id/userImg"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:contentDescription="@string/nav_header_desc"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@mipmap/ic_launcher_ephu" />
-
     <TextView
         android:id="@+id/userNameTv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
-        android:text="@string/nav_header_title"
+        android:text="@string/unknown_device"
         android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-        app:layout_constraintStart_toEndOf="@+id/userImg"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/deviceIdTv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
         android:layout_marginTop="8dp"
         android:text="@string/nav_header_subtitle"
-        app:layout_constraintStart_toEndOf="@+id/userImg"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/userNameTv" />
 
     <TextView
         android:id="@+id/syncedDataLabelTv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="20dp"
         android:text="@string/demo_synced_data_label"
         app:drawableLeftCompat="@drawable/ic_baseline_sync_24"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/userImg" />
+        app:layout_constraintTop_toBottomOf="@+id/deviceIdTv" />
 
     <TextView
         android:id="@+id/lastSyncLabelTv"
@@ -68,9 +55,9 @@
         android:id="@+id/appVersionTv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="V1.1.1"
         android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="@+id/lastSyncLabelTv"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/lastSyncLabelTv" />
+        app:layout_constraintTop_toTopOf="@+id/lastSyncLabelTv"
+        tools:text="V1.1.1" />
 </androidx.constraintlayout.widget.ConstraintLayout>

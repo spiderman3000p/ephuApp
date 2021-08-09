@@ -21,6 +21,7 @@ data class Location(
     var height: Int = 0,
     var deep: Int? = null,
     var locationType: String? = null,
+    var locationId: Int? = null,
     var depotId: Int? = null,
     var taskId: Int? = null,
     var details: String? = null,

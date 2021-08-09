@@ -1,10 +1,16 @@
 package com.tau.ephuapp.services
 
 import android.content.Context
+import android.database.sqlite.SQLiteAccessPermException
+import android.database.sqlite.SQLiteCantOpenDatabaseException
+import android.database.sqlite.SQLiteDatabaseLockedException
 import android.util.Log
 import androidx.work.*
 import com.google.gson.Gson
 import com.tau.ephuapp.classes.*
+import com.tau.ephuapp.database.AppDatabase
+import com.tau.ephuapp.models.FetchedDataHistory
+import com.tau.ephuapp.models.HistoryType
 import com.tau.ephuapp.models.ItemCount
 import com.tau.ephuapp.models.TaskState
 import org.jetbrains.anko.doAsync
@@ -25,7 +31,6 @@ class MyWorkerManagerService {
             val data = workDataOf(
                 "countJSON" to countJSON
             )
-            Log.i(TAG, "data enviada al work de editar conteo: $data")
             val uploadWorkRequest =
                     OneTimeWorkRequestBuilder<UploadEditSingleCountWorker>()
                             .setConstraints(constraints)
@@ -35,7 +40,7 @@ class MyWorkerManagerService {
                             .build()
             WorkManager
                     .getInstance(context)
-                    .enqueueUniqueWork(tag ?: "uploadEditCountRequest-${count.localId}", ExistingWorkPolicy.APPEND, uploadWorkRequest)
+                    .enqueueUniqueWork(tag ?: "uploadEditCountRequest-${count.localId}", ExistingWorkPolicy.REPLACE, uploadWorkRequest)
         }
 
         fun enqueDeleteCountWork(context: Context, count: ItemCount){
@@ -58,8 +63,9 @@ class MyWorkerManagerService {
         }
 
         fun enqueCountToUploadArrayWork(context: Context, newCountsToSave: List<ItemCount>, taskId: Int, tag: String){
-            Log.i(TAG, "encolando work para subir lista de counts $newCountsToSave")
+            Log.i(TAG, "encolando work para subir lista de counts: $newCountsToSave")
             if(newCountsToSave.size > 50) {
+                Log.i(TAG, "hay mas de 50 registros, enviando por lotes de 50...")
                 var from = 0
                 var to = 49
                 doAsync {
@@ -78,6 +84,7 @@ class MyWorkerManagerService {
                     }
                 }
             } else {
+                Log.i(TAG, "hay menos de 50 registros, enviando por unidad...")
                 enqueCountsToUpload(context, taskId, newCountsToSave, tag)
             }
         }
@@ -144,16 +151,72 @@ class MyWorkerManagerService {
         }
 
         fun uploadPendingCounts(context: Context){
-            Log.i(TAG, "iniciando trabajo para buscar conteos no subidos")
-            val uploadWorkRequest =
-                    PeriodicWorkRequestBuilder<UploadFailedCountsWorker>(15, TimeUnit.MINUTES)
-                            .setConstraints(constraints)
-                            .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS)
-                            .addTag("uploadFailedCountsRequest")
-                            .build()
-            WorkManager
-                    .getInstance(context)
-                    .enqueueUniquePeriodicWork("uploadFailedCountsRequest", ExistingPeriodicWorkPolicy.REPLACE, uploadWorkRequest)
+            doAsync {
+                var db: AppDatabase? = null
+                var pendingToUploadCountsAndRecounts: List<ItemCount>? = null
+                var pendingToUpdateCountsAndRecounts: List<ItemCount>? = null
+                try {
+                    db = AppDatabase.getDatabase(context)
+                } catch (ex: SQLiteDatabaseLockedException) {
+                    Log.e(TAG, "Database error found", ex)
+                } catch (ex: SQLiteAccessPermException) {
+                    Log.e(TAG, "Database error found", ex)
+                } catch (ex: SQLiteCantOpenDatabaseException) {
+                    Log.e(TAG, "Database error found", ex)
+                }
+                Log.i(TAG, "iniciando trabajo para buscar conteos no subidos")
+                pendingToUploadCountsAndRecounts =
+                    db?.itemCountDao()?.getAllPendingCountsAndRecountsToUpload()
+                pendingToUpdateCountsAndRecounts =
+                    db?.itemCountDao()?.getAllPendingCountsAndRecountsToUpdate()
+                if (!pendingToUploadCountsAndRecounts.isNullOrEmpty()) {
+                    Log.i(
+                        TAG,
+                        "Hay ${pendingToUploadCountsAndRecounts.size} de conteos pendientes por subir..."
+                    )
+                    val tasksIds = pendingToUploadCountsAndRecounts.map {
+                        it.taskId
+                    }
+                    for (taskId in tasksIds.distinct()) {
+                        val countsToSave = pendingToUploadCountsAndRecounts.filter {
+                            it.taskId == taskId
+                        }
+                        Log.i(
+                            TAG,
+                            "Subiendo ${countsToSave.size} conteos pendientes por subir para la tarea $taskId..."
+                        )
+                        enqueCountToUploadArrayWork(
+                            context,
+                            countsToSave,
+                            taskId!!,
+                            Constants.SAVING_COUNTS_PROGRESS
+                        )
+                        Thread.sleep(2000)
+                    }
+                }
+
+                if (!pendingToUpdateCountsAndRecounts.isNullOrEmpty()) {
+                    Log.i(
+                        TAG,
+                        "Hay ${pendingToUpdateCountsAndRecounts?.size} de conteos pendientes por actualizar..."
+                    )
+                    for (itemCount in pendingToUpdateCountsAndRecounts!!) {
+                        Log.i(TAG, "Subiendo actualizacion de conteo para el conteo $itemCount...")
+                        enqueEditCountToUploadWork(
+                            context,
+                            itemCount,
+                            Constants.SAVING_EDIT_COUNT_PROGRESS
+                        )
+                        Thread.sleep(2000)
+                    }
+                }
+                db?.fetchedHistoryDao()?.insert(
+                    FetchedDataHistory(
+                        tag = HistoryType.LAST_PENDING_REVISION.toString(),
+                        lastUpdate = System.currentTimeMillis()
+                    )
+                )
+            }
         }
     }
 }

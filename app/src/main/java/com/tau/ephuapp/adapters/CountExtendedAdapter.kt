@@ -38,10 +38,9 @@ class CountExtendedAdapter(
     override fun onBindViewHolder(holder: TaskHolder, position: Int) {
         with(holder){
             with(list[position]){
-
                 if(uploaded) {
                     if(dirty) {
-                        Log.i(TAG, "el conteo $id en la posicion $position ha sido modificado")
+                        //Log.i(TAG, "el conteo $id en la posicion $position ha sido modificado")
                         binding.itemCard.setCardBackgroundColor(
                             ContextCompat.getColor(
                                 context,
@@ -49,24 +48,25 @@ class CountExtendedAdapter(
                             )
                         )
                     } else {
-                        /*binding.itemCard.setCardBackgroundColor(
+                        binding.itemCard.setCardBackgroundColor(
                             ContextCompat.getColor(
                                 context,
-                                R.color.cp_state
+                                R.color.white
                             )
-                        )*/
+                        )
                     }
                 } else {
-                    Log.i(TAG, "el conteo $id en la posicion $position esta normal")
+                    //Log.i(TAG, "el conteo $id en la posicion $position esta normal")
                     binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.white))
                 }
                 binding.taskIdTv.text = taskId.toString()
                 binding.skuTv.text = sku ?: ""
                 binding.descriptionTv.text = description ?: ""
                 binding.quantityTv.text = (quantity).toString()
-                if(hasError == true || (recount && dirty)){
+                binding.statusBtn.visibility = View.GONE
+                if(hasError == true || (recount && dirty) || uploaded){
                     if(hasError == false && ((recount && dirty) || uploaded)){
-                        if (uploaded) {
+                        if (uploaded && !dirty) {
                             binding.statusBtn.setImageDrawable(
                                 getDrawable(
                                     context,
@@ -90,7 +90,8 @@ class CountExtendedAdapter(
                                     )
                                 }
                             }
-                        } else if(recount && dirty){
+                            binding.statusBtn.visibility = View.VISIBLE
+                        } else if(!uploaded && recount && dirty){
                             binding.statusBtn.setImageDrawable(
                                 getDrawable(
                                     context,
@@ -104,6 +105,7 @@ class CountExtendedAdapter(
                                     context.getString(R.string.recount_already_made_msg)
                                 )
                             }
+                            binding.statusBtn.visibility = View.VISIBLE
                         }
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                             binding.statusBtn.foregroundTintList = getColorStateList(context, R.color.cp_state)
@@ -116,8 +118,8 @@ class CountExtendedAdapter(
                         binding.statusBtn.setOnClickListener {
                             Utilities.showAlert(context, context.getString(R.string.error), errorMessage ?: context.getString(R.string.unknown_error))
                         }
+                        binding.statusBtn.visibility = View.VISIBLE
                     }
-                    binding.statusBtn.visibility = View.VISIBLE
                 } else {
                     binding.statusBtn.visibility = View.GONE
                 }

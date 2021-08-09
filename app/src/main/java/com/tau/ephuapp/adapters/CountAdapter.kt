@@ -41,9 +41,9 @@ class CountAdapter(
     override fun onBindViewHolder(holder: TaskHolder, position: Int) {
         with(holder){
             with(list[position]){
-                Log.i(TAG, "onBindViewHolder count: $this")
+                //Log.i(TAG, "onBindViewHolder count: $this")
                 if(editing){
-                    Log.i(TAG, "el conteo $id en la posicion $position esta siendo editado")
+                    //Log.i(TAG, "el conteo $id en la posicion $position esta siendo editado")
                     binding.deleteBtn.visibility = View.GONE
                     binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.editing_count))
                 } else {
@@ -51,10 +51,10 @@ class CountAdapter(
                         binding.deleteBtn.visibility = View.VISIBLE
                     }
                     if(uploaded && dirty) {
-                        Log.i(TAG, "el conteo $id en la posicion $position ha sido modificado")
+                        //Log.i(TAG, "el conteo $id en la posicion $position ha sido modificado")
                         binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.teal_201))
                     } else {
-                        Log.i(TAG, "el conteo $id en la posicion $position esta normal")
+                        //Log.i(TAG, "el conteo $id en la posicion $position esta normal")
                         binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.white))
                     }
                 }
@@ -62,14 +62,11 @@ class CountAdapter(
                 binding.descriptionTv.text = description ?: ""
                 binding.quantityTv.text = (quantity).toString()
                 binding.statusBtn.visibility = View.GONE
-                if(recount){
-                    binding.deleteBtn.visibility = View.GONE
-                }
                 if(hasError == true || recount || dirty || uploaded){
                     if(hasError != true && (recount || dirty || uploaded)){
-                        Log.i(TAG, "el conteo ${id} no tiene error")
+                        //Log.i(TAG, "el conteo ${id} no tiene error")
                         if (uploaded) {
-                            Log.i(TAG, "el conteo ${id} ha sido subido")
+                            //Log.i(TAG, "el conteo ${id} ha sido subido")
                             binding.statusBtn.setImageDrawable(
                                 getDrawable(
                                     context,
@@ -77,7 +74,7 @@ class CountAdapter(
                                 )
                             )
                             if(recount){
-                                Log.i(TAG, "el conteo ${id} es un reconteo")
+                                //Log.i(TAG, "el conteo ${id} es un reconteo")
                                 binding.statusBtn.setOnClickListener {
                                     Utilities.showAlert(
                                         context,
@@ -86,7 +83,7 @@ class CountAdapter(
                                     )
                                 }
                             } else {
-                                Log.i(TAG, "el conteo ${id} no es un reconteo")
+                                //Log.i(TAG, "el conteo ${id} no es un reconteo")
                                 binding.statusBtn.setOnClickListener {
                                     Utilities.showAlert(
                                         context,
@@ -96,8 +93,8 @@ class CountAdapter(
                                 }
                             }
                             binding.statusBtn.visibility = View.VISIBLE
-                        } else if(recount){
-                            Log.i(TAG, "el conteo ${id} no ha sido subido y es un reconteo modificado")
+                        } else if(recount && dirty){
+                            //Log.i(TAG, "el conteo ${id} no ha sido subido y es un reconteo modificado")
                             binding.statusBtn.setImageDrawable(
                                 getDrawable(
                                     context,
@@ -117,7 +114,7 @@ class CountAdapter(
                             binding.statusBtn.visibility = View.VISIBLE
                         }
                     } else if (hasError == true){
-                        Log.i(TAG, "el conteo ${id} tiene un error")
+                        //Log.i(TAG, "el conteo ${id} tiene un error")
                         binding.statusBtn.setImageDrawable(getDrawable(context, R.drawable.ic_baseline_cancel_24))
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                             binding.statusBtn.foregroundTintList = getColorStateList(context, R.color.pe_cancelled)
@@ -154,12 +151,9 @@ class CountAdapter(
                 }
                 binding.itemCard.setOnClickListener {
                     onEditCallback?.let{
-                        Log.i(TAG, "click realizado en item en la posicion $position: ${list[position]}")
+                        //Log.i(TAG, "click realizado en item en la posicion $position: ${list[position]}")
                         if(!editing && (!recount || (recount && !uploaded))){
-                            //isEditing = position
                             editing = true
-                            //notifyItemChanged(position)
-                            //notifyDataSetChanged()
                             it(this, position)
                         }
                     }
@@ -174,9 +168,5 @@ class CountAdapter(
 
     fun getItemAtPosition(position: Int): ItemCount?{
         return list.getOrNull(position)
-    }
-
-    fun getItemList(): List<ItemCount>{
-        return list
     }
 }

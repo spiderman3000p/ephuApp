@@ -9,6 +9,12 @@ interface ItemCountDao {
     @Query("SELECT * FROM itemcount WHERE id = CAST(:id AS NUMERIC)")
     fun getById(id: Int): ItemCount?
 
+    @Query("SELECT * FROM itemcount WHERE tasklineid = CAST(:id AS NUMERIC)")
+    fun getByTaskLineId(id: Int): ItemCount?
+
+    @Query("SELECT * FROM itemcount WHERE tasklineid = CAST(:taskLineId AS NUMERIC) AND itemid = CAST(:itemId AS NUMERIC)")
+    fun getByTaskLineAndItem(taskLineId: Int, itemId: Int): ItemCount?
+
     @Query("SELECT * FROM itemcount WHERE localid = :id")
     fun getByLocalId(id: String): ItemCount?
 
@@ -20,6 +26,9 @@ interface ItemCountDao {
 
     @Query("SELECT * FROM itemcount WHERE itemId = CAST(:itemId AS NUMERIC)")
     fun getAllByItem(itemId: Int): List<ItemCount>
+
+    @Query("SELECT * FROM itemcount WHERE taskid = CAST(:taskId AS NUMERIC)")
+    fun getAllByTask(taskId: Int): List<ItemCount>
 
     @Query("SELECT * FROM itemcount WHERE uploaded = 0")
     fun getAllPendingCountsAndRecountsToUpload(): List<ItemCount>
@@ -110,6 +119,9 @@ interface ItemCountDao {
 
     @Query("SELECT * FROM itemcount WHERE localid IN (:ids) AND recount = 1")
     fun loadAllRecountsByLocalIds(ids: Array<String>): List<ItemCount>
+
+    @Query("DELETE FROM itemcount WHERE taskId = :taskId")
+    fun deleteAllByTaskId(taskId: Int)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(item: ItemCount)

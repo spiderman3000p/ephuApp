@@ -21,12 +21,14 @@ import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
 
 class CountsFragment : Fragment() {
+    private var taskFilterStr: String? = null
+    private var filtered: Boolean = false
     private val TAG = "COUNTS_FRAGMENT"
     private lateinit var viewModel: MainActivityViewModel
     private var mAdapter: CountExtendedAdapter? = null
     private var filteredData = arrayListOf<ItemCount>()
     private var _binding: FragmentCountsBinding? = null
-    private val binding get() = _binding!!
+    private val binding get() = _binding
     private lateinit var db: AppDatabase
     //private lateinit var taskType: TaskType
     override fun onCreateView(
@@ -35,8 +37,7 @@ class CountsFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         _binding = FragmentCountsBinding.inflate(inflater, container, false)
-        binding.titleTv.text = getString(R.string.task_list_title, DateUtils.formatDateTime(context, System.currentTimeMillis(), 0), 0)
-        val taskType = null//TaskType.valueOf(arguments?.getString("taskType")!!)
+        binding?.titleTv?.text = getString(R.string.task_list_title, DateUtils.formatDateTime(context, System.currentTimeMillis(), 0), 0)
         activity?.actionBar?.title = getString(R.string.saved_counts)
         val _viewModel: MainActivityViewModel by activityViewModels()
         viewModel = _viewModel
@@ -55,13 +56,13 @@ class CountsFragment : Fragment() {
             it.forEach { workInfo ->
                 if (WorkInfo.State.ENQUEUED == workInfo.state) {
                     Log.i(TAG, "progreso de subida de conteos observado...trabajo encolado")
-                    binding.progressBar3.visibility = View.VISIBLE
+                    binding?.progressBar3?.visibility = View.VISIBLE
                     //Utilities.showToast(requireContext(), getString(R.string.uploading_counts))
                 } else {
-                    binding.progressBar3.visibility = View.INVISIBLE
+                    binding?.progressBar3?.visibility = View.INVISIBLE
                 }
                 if (WorkInfo.State.SUCCEEDED == workInfo.state) {
-                    Log.i(TAG, "progreso de subida de conteos observado...trabajo finalizado con exito")
+                    Log.i(TAG, "progreso de subida de conteos finalizado con exito")
                     var msg = getString(R.string.counts_uploaded_successfully)
                     if(workInfo.outputData.hasKeyWithValueOfType("exception", String::class.java)){
                         msg = workInfo.outputData.getString("exception").toString()
@@ -69,10 +70,10 @@ class CountsFragment : Fragment() {
                         msg = workInfo.outputData.getString("error").toString()
                     }
                     //Utilities.showToast(requireContext(), msg)
-                    fetchCounts()
+                    //fetchCounts()
                 }
                 if (WorkInfo.State.FAILED == workInfo.state) {
-                    Log.i(TAG, "progreso de subida de conteos observado...trabajo finalizado con error")
+                    Log.i(TAG, "progreso de subida de conteos finalizado con error")
                     var msg = getString(R.string.error_uploading_counts)
                     if(workInfo.outputData.hasKeyWithValueOfType("exception", String::class.java)){
                         msg = workInfo.outputData.getString("exception").toString()
@@ -82,29 +83,25 @@ class CountsFragment : Fragment() {
                     //Utilities.showToast(requireContext(), msg)
                 }
                 if (WorkInfo.State.CANCELLED == workInfo.state) {
-                    Log.i(TAG, "progreso de subida de conteos observado...trabajo cancelado")
+                    Log.i(TAG, "progreso de subida de conteos cancelado")
                     //Utilities.showToast(requireContext(), getString(R.string.counts_uploading_cancelled))
                 }
             }
         })
-        return binding.root
+        viewModel.filterCountsInput.observe(viewLifecycleOwner, {
+            Log.i(TAG, "filter input received: $it")
+            filterCounts(it)
+        })
+        viewModel.filterCountsInput.setValue(null)
+        return binding?.root
     }
 
     private fun fetchCounts() {
         doAsync {
             val counts = db.itemCountDao().getAll()
             Log.i(TAG, "counts locales: ${counts.size}")
-            filteredData.clear()
-            if (!counts.isNullOrEmpty()) {
-                filteredData.addAll(counts)
-            }
             uiThread {
-                binding.titleTv.text = getString(
-                    R.string.counts_list_title,
-                    DateUtils.formatDateTime(context, System.currentTimeMillis(), 0),
-                    filteredData.size
-                )
-                mAdapter?.notifyDataSetChanged()
+                presentCounts(counts)
             }
         }
     }
@@ -115,12 +112,60 @@ class CountsFragment : Fragment() {
 
     private fun initAdapter(){
         mAdapter = CountExtendedAdapter(filteredData, requireContext())
-        binding.countsRv.layoutManager = LinearLayoutManager(requireContext())
-        binding.countsRv.adapter = mAdapter
+        binding?.countsRv?.layoutManager = LinearLayoutManager(requireContext())
+        binding?.countsRv?.adapter = mAdapter
     }
 
     override fun onDestroy() {
         super.onDestroy()
         _binding = null
+    }
+
+    private fun filterCounts(query: String?) {
+        Log.i(TAG, "filtering counts")
+        taskFilterStr = if(query?.startsWith("task ") == true || query?.startsWith("tarea ") == true){
+            query.split(" ").get(1)
+        } else {
+            null
+        }
+        filtered = query?.isNotEmpty() == true
+        doAsync {
+            val filteredCounts = db.itemCountDao().getAll().filter {
+                (!taskFilterStr.isNullOrBlank() && taskFilterStr == it.taskId.toString()) ||
+                (query.isNullOrBlank() || it.sku?.toLowerCase()?.contains(query) == true ||
+                it.description?.toLowerCase()?.contains(query) == true)
+            }
+            uiThread {
+                presentCounts(filteredCounts)
+            }
+        }
+    }
+
+    fun presentCounts(counts: List<ItemCount>){
+        Log.i(TAG, "presentando conteos: $counts")
+        binding?.titleTv?.text = getString(
+            if(filtered){
+                if(!taskFilterStr.isNullOrBlank()) {
+                    R.string.task_filtred_counts_list_title
+                } else {
+                    R.string.filtred_counts_list_title
+                }
+            } else {R.string.counts_list_title},
+            DateUtils.formatDateTime(context, System.currentTimeMillis(), 0),
+            counts.size,
+            taskFilterStr
+        )
+        binding?.errorTv?.text = counts.count {
+            it.hasError == true
+        }.toString()
+        binding?.uploadedTv?.text = counts.count {
+            it.uploaded && !it.dirty
+        }.toString()
+        binding?.pendingTv?.text = counts.count {
+            !it.uploaded || (it.uploaded && it.dirty)
+        }.toString()
+        filteredData.clear()
+        filteredData.addAll(counts)
+        mAdapter?.notifyDataSetChanged()
     }
 }

@@ -23,9 +23,48 @@
         android:layout_height="wrap_content"
         android:padding="8dp"
         android:text="@string/demo_long_date"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/pendingTv"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/progressBar3" />
+
+    <TextView
+        android:id="@+id/errorTv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:drawableStart="@drawable/ic_baseline_cancel_24"
+        android:drawablePadding="5dp"
+        android:gravity="center"
+        android:text="0"
+        app:layout_constraintBottom_toBottomOf="@+id/uploadedTv"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/uploadedTv" />
+
+    <TextView
+        android:id="@+id/uploadedTv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:drawableStart="@drawable/ic_baseline_cloud_done_24"
+        android:drawablePadding="5dp"
+        android:gravity="center"
+        android:text="0"
+        app:layout_constraintBottom_toBottomOf="@+id/pendingTv"
+        app:layout_constraintEnd_toStartOf="@+id/errorTv"
+        app:layout_constraintTop_toTopOf="@+id/pendingTv" />
+
+    <TextView
+        android:id="@+id/pendingTv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:drawableStart="@drawable/ic_baseline_check_circle_24"
+        android:drawablePadding="5dp"
+        android:gravity="center"
+        android:text="0"
+        app:layout_constraintBottom_toBottomOf="@+id/titleTv"
+        app:layout_constraintEnd_toStartOf="@+id/uploadedTv"
+        app:layout_constraintTop_toBottomOf="@id/progressBar3" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/countsRv"

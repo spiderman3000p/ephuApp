@@ -54,13 +54,10 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:background="@android:color/transparent"
-            android:tint="#C12525"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/taskIdTv"
-            app:srcCompat="@drawable/ic_baseline_cancel_24"
-            tools:visibility="visible" />
+            app:layout_constraintTop_toBottomOf="@id/taskIdTv" />
 
         <TextView
             android:id="@+id/skuTv"
