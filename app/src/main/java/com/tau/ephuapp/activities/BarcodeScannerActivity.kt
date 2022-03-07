@@ -1,6 +1,7 @@
 package com.tau.ephuapp.activities
 
 //import com.budiyev.android.codescanner.*
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -8,12 +9,11 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.zxing.Result
 //import com.tau.ephuapp.databinding.FragmentBarcodeScannerBinding
 import me.dm7.barcodescanner.zxing.ZXingScannerView
-
+@SuppressLint("LongLogTag")
 class BarcodeScannerActivity : AppCompatActivity(), ZXingScannerView.ResultHandler {
     //lateinit var binding: FragmentBarcodeScannerBinding
     //private lateinit var codeScanner: CodeScanner
     private lateinit var mScannerView: ZXingScannerView
-    private val TAG = "BARCODE_SCANNER_ACTIVITY"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         //binding = FragmentBarcodeScannerBinding.inflate(layoutInflater)
@@ -73,5 +73,9 @@ class BarcodeScannerActivity : AppCompatActivity(), ZXingScannerView.ResultHandl
         mScannerView.stopCamera();
         setResult(RESULT_OK, Intent().putExtra("barcode", barcode))
         finish()
+    }
+
+    companion object{
+        private const val TAG = "BARCODE_SCANNER_ACTIVITY"
     }
 }

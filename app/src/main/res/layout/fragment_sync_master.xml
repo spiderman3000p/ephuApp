@@ -254,7 +254,7 @@
                 android:textColor="?attr/colorSecondary"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@id/divider4" />
+                app:layout_constraintTop_toTopOf="@id/divider7" />
 
             <TextView
                 android:id="@+id/lastPendingCountsRevisionTv"
@@ -269,11 +269,11 @@
                 android:id="@+id/forcePushCountsBtn"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="30dp"
+                android:layout_marginEnd="20dp"
                 android:text="@string/push"
                 android:textSize="12sp"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/divider4" />
+                app:layout_constraintTop_toBottomOf="@+id/divider7" />
 
             <View
                 android:id="@+id/divider6"
@@ -287,6 +287,28 @@
                 app:layout_constraintTop_toBottomOf="@id/lastPendingCountsRevisionTv" />
 
             <TextView
+                android:id="@+id/pendingToUploadCountsTitleTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="30dp"
+                android:layout_marginTop="30dp"
+                android:text="@string/pending_to_upload_counts"
+                android:textColor="?attr/colorSecondary"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@id/divider4" />
+
+            <TextView
+                android:id="@+id/pendingCountsTv2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/pending_counts"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="@+id/itemsTitleTv"
+                app:layout_constraintTop_toBottomOf="@id/pendingToUploadCountsTitleTv" />
+
+            <TextView
                 android:id="@+id/pendingCountsTv"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -295,6 +317,44 @@
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="@+id/itemsTitleTv"
                 app:layout_constraintTop_toBottomOf="@id/pushPendingCountsTv" />
+
+            <View
+                android:id="@+id/divider7"
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_marginTop="30dp"
+                android:background="?android:attr/listDivider"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/pendingToUploadCountsPathTv" />
+
+            <Button
+                android:id="@+id/pendingToUploadCountsExportBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="30dp"
+                android:text="@string/export"
+                android:textSize="12sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/divider4" />
+
+            <TextView
+                android:id="@+id/pendingToUploadCountsLastExportTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:drawableStart="@drawable/ic_baseline_history_24"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="@+id/itemsTitleTv"
+                app:layout_constraintTop_toBottomOf="@id/pendingCountsTv2" />
+
+            <TextView
+                android:id="@+id/pendingToUploadCountsPathTv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                app:layout_constraintStart_toStartOf="@+id/totalItemsTv"
+                app:layout_constraintTop_toBottomOf="@id/pendingToUploadCountsLastExportTv" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

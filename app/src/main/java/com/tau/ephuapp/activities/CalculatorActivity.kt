@@ -22,7 +22,6 @@ enum class Errors{
     ZERO_DIVISION, UNKNOW
 }
 class CalculatorActivity : AppCompatActivity() {
-    private val TAG = "CalculatorActivity"
     private lateinit var binding: ActivityCalculatorBinding
     private var currentResult: Double? = 0.0
     private var currentInputText: String = "0"
@@ -334,5 +333,9 @@ class CalculatorActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean {
         onBackPressed()
         return true
+    }
+
+    companion object{
+        private const val TAG = "CalculatorActivity"
     }
 }

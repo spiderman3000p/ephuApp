@@ -16,7 +16,6 @@ import org.joda.time.DateTime
 import java.lang.Exception
 
 class MainRepository {
-    private val TAG = "MAIN_REPOSITORY"
     private var device = MutableLiveData<Device?>()
     private var tasksList = MutableLiveData<ArrayList<Task>?>()
     private var currentLocation = MutableLiveData<Location?>()
@@ -24,9 +23,13 @@ class MainRepository {
     private var currentTaskLocations = MutableLiveData<ArrayList<Location>?>()
     private var currentLocationCounts = MutableLiveData<ArrayList<ItemCount>>()
     private var currentLocationRecountTasks = MutableLiveData<ArrayList<ItemCountTask>>()
+    private var currentCertificationTaskItems = MutableLiveData<ArrayList<CertificationTaskItem>?>()
+    private var pendingCertificationTaskItems = MutableLiveData<ArrayList<CertificationTaskItem>?>()
+    private var certifiedItems = MutableLiveData<ArrayList<Certification>?>()
     private var currentTask = MutableLiveData<Task?>()
     private var itemsLoaded = MutableLiveData<Boolean?>()
     private var isSavingCounts = MutableLiveData<Boolean?>()
+    private var isSavingCount = MutableLiveData<Boolean?>()
 
     fun getDevice(): LiveData<Device?> {
         return device
@@ -90,6 +93,30 @@ class MainRepository {
         return tasksList
     }
 
+    fun getCurrentCertificationTaskItems(): LiveData<ArrayList<CertificationTaskItem>?> {
+        return currentCertificationTaskItems
+    }
+
+    fun setCurrentCertificationTaskItems(items: ArrayList<CertificationTaskItem>?) {
+        currentCertificationTaskItems.postValue(items)
+    }
+
+    fun getCertifiedItems(): LiveData<ArrayList<Certification>?> {
+        return certifiedItems
+    }
+
+    fun setCertifiedItems(items: ArrayList<Certification>?) {
+        certifiedItems.postValue(items)
+    }
+
+    fun getPendingCertificationTaskItems(): LiveData<ArrayList<CertificationTaskItem>?> {
+        return pendingCertificationTaskItems
+    }
+
+    fun setPendingCertificationTaskItems(items: ArrayList<CertificationTaskItem>?) {
+        pendingCertificationTaskItems.postValue(items)
+    }
+
     fun setTasks(tasks: ArrayList<Task>) {
         tasksList.postValue(tasks)
     }
@@ -114,6 +141,10 @@ class MainRepository {
         return isSavingCounts
     }
 
+    fun getIsSavingCount(): LiveData<Boolean?> {
+        return isSavingCount
+    }
+
     fun setCurrentTask(task: Task?) {
         currentTask.postValue(task)
     }
@@ -132,6 +163,10 @@ class MainRepository {
 
     fun setIsSavingCounts(value: Boolean?) {
         isSavingCounts.postValue(value)
+    }
+
+    fun setIsSavingCount(value: Boolean?) {
+        isSavingCount.postValue(value)
     }
 
     fun addCountToCurrentLocationCounts(count: ItemCount) {
@@ -197,7 +232,8 @@ class MainRepository {
         Log.i(TAG, "fetching remote tasks...")
         val client = MyClient.getInstance(context).create(MyDataService::class.java)
         val androidId = Utilities.getAndroidId(context)
-        val url = "obtenerTareas/${androidId}"
+        //val url = "obtenerTareas/${androidId}"
+        val url = "listarTareas/${androidId}"
         try {
             val call = client.getTasks(url).execute()
             val response = call.body()
@@ -211,27 +247,75 @@ class MainRepository {
                 db.tasksDao().deleteAll()
                 db.tasksParameterDao().deleteAll()
                 db.taskLocationsDao().deleteAll()
-                db.taskLocationsDao().deleteAll()
                 db.itemCountDao().deleteAll()
+                db.certificationTaskItemsDao().deleteAll()
+                db.certificationsDao().deleteAll()
                 if(tasks.isNotEmpty()) {
+                    Log.i(TAG, "tareas cargadas $tasks")
                     db.tasksDao().insertAll(tasks)
                     val parameters = tasks.flatMap { task ->
-                        task.parameters?.map { parameter ->
+                        task.parameters?.filter { parameter ->
                             parameter.taskId = task.id
-                            parameter
+                            parameter.value = parameter.value ?: false
+                            parameter.parameterType != null
                         } ?: listOf()
                     }
                     if (!parameters.isNullOrEmpty()) {
                         db.tasksParameterDao().insertAll(parameters)
                     }
-                    // obtener ubicaciones de las tareas
+                    // obtener ubicaciones y/o items de las tareas
                     tasks.forEach {task ->
-                        if(task.taskType == TaskType.Inventory) {
-                            fetchRemoteTaskLocations(context, task.id)
-                        } else if(task.taskType == TaskType.Recount) {
-                            fetchRemoteTaskLocationsRecount(context, task.id)
+                        if (task.taskType != TaskType.Certification) {
+                            val locations = arrayListOf<Location>()
+                            task.locations?.forEach { location ->
+                                if (location.locationId != null) {
+                                    location.taskId = task.id
+                                    if (task.taskType == TaskType.Recount && !location.details.isNullOrEmpty()) {
+                                        val itemCountTasks = arrayListOf<ItemCountTask>()
+                                        itemCountTasks.addAll(location.details?.map { itemCount ->
+                                            ItemCountTask(
+                                                    taskId = task.id,
+                                                    taskLineId = itemCount.taskLineId!!,
+                                                    itemId = itemCount.itemId!!,
+                                                    lpnCode = itemCount.lpnCode,
+                                                    lot = itemCount.lot,
+                                                    localId = itemCount.localId,
+                                                    expiryDate = itemCount.expiryDate,
+                                                    createdDate = itemCount.createdDate,
+                                                    serial = itemCount.serial,
+                                                    locationId = itemCount.locationId,
+                                                    editing = false
+                                            )
+                                        }?.toMutableList()!!)
+                                        db.itemCountTaskDao().insertAll(itemCountTasks)
+                                    }
+                                    locations.add(location)
+                                }
+                            }
+                            if (locations.isNotEmpty()) {
+                                db.taskLocationsDao().insertAll(locations)
+                            }
+                            fetchRemoteTaskCounts(context, task.id)
                         }
-                        fetchRemoteTaskCounts(context, task.id)
+                        else {
+                            Log.i(TAG, "tarea certificacion $task")
+                            val certificationTaskItems = arrayListOf<CertificationTaskItem>()
+                            val certifications = arrayListOf<Certification>()
+                            task.items?.forEach { item ->
+                                item.taskId = task.id
+                                certificationTaskItems.add(item)
+                                if (item.taskQuantity > 0) {
+                                    certifications.add(Certification(itemId = item.itemId, taskId = task.id, quantity = item.taskQuantity))
+                                }
+                            }
+                            if (!certificationTaskItems.isNullOrEmpty()) {
+                                db.certificationTaskItemsDao().insertAll(certificationTaskItems)
+                            }
+                            //fetchRemoteTaskCertifications(context, task.id)
+                            if(!certifications.isNullOrEmpty()) {
+                                db.certificationsDao().insertAll(certifications)
+                            }
+                        }
                     }
                 }
                 tasksList.postValue(tasks)
@@ -299,19 +383,78 @@ class MainRepository {
                 if(locations.isNotEmpty()) {
                     db.taskLocationsDao().insertAll(locations)
                 }
-                val orderedLocationsList = db.taskLocationsDao().getAllByTask(taskId)
-                val orderedLocationsArrayList = arrayListOf<Location>()
-                orderedLocationsArrayList.addAll(orderedLocationsList)
-                currentTaskLocations.postValue(orderedLocationsArrayList)
             }
         } catch (e: Exception){
             e.printStackTrace()
             Log.e(TAG, "error al obtener ubicaciones del servidor ${e.message}")
             Utilities.showAlert(context, context.getString(R.string.error), context.getString(R.string.error_fetching_remote_locations))
-            currentTaskLocations.postValue(null)
+            //currentTaskLocations.postValue(null)
         }
     }
     // end task locations fetching
+
+    // certifications fetching
+    fun fetchCertifiedItems(context: Context, taskId: Int, forceRemote: Boolean = false){
+        doAsync {
+            Log.i(TAG, "fetching task certifications for task $taskId...")
+            if (forceRemote || shouldFetchRemoteCertifications(context, taskId)) {
+                fetchRemoteTaskCertifications(context, taskId)
+            } else {
+                fetchLocalCertifications(context, taskId)
+            }
+        }
+    }
+
+    private fun shouldFetchRemoteCertifications(context: Context, taskId: Int): Boolean{
+        Log.i(TAG, "should fetch remote certifications for task $taskId?")
+        val db = AppDatabase.getDatabase(context)
+        val history = db.fetchedHistoryDao().getByTag(HistoryType.CERTIFICATIONS.toString().plus("-${taskId}"))
+        Log.i(TAG, "local certifications history: $history")
+        val count = db.certificationsDao().countAllByTask(taskId)
+        Log.i(TAG, "local certifications count: $count")
+        val isFromToday = DateUtils.isToday(history?.lastUpdate ?: 0)
+        Log.i(TAG, "local certifications is from today: $isFromToday")
+        return !isFromToday || (isFromToday && count == 0)
+    }
+
+    private fun fetchLocalCertifications(context: Context, taskId: Int){
+        Log.i(TAG, "fetching local certifications for task $taskId...")
+        val db: AppDatabase = AppDatabase.getDatabase(context)
+        db.certificationsDao().getAllByTask(taskId).let {
+            certifiedItems.postValue(ArrayList(it))
+        }
+    }
+
+    private fun fetchRemoteTaskCertifications(context: Context, taskId: Int){
+        Log.i(TAG, "fetching remote certifications for task $taskId...")
+        val client = MyClient.getInstance(context).create(MyDataService::class.java)
+        val url = "obtenerEscaneos/${taskId}"
+        try {
+            val call = client.getTaskCertifications(url).execute()
+            val response = call.body()
+            Log.i(TAG, "respuesta fetching task certifications: $response")
+            response?.let { certifications ->
+                val db: AppDatabase = AppDatabase.getDatabase(context)
+                db.fetchedHistoryDao().insert(FetchedDataHistory(
+                        tag = HistoryType.CERTIFICATIONS.toString().plus("-${taskId}"),
+                        lastUpdate = System.currentTimeMillis()
+                ))
+                db.certificationsDao().deleteAllByTask(taskId)
+                // TODO: Eliminar en el futuro. Aqui se inyecta manualmente el id de la tarea relacionada, esto relentiza
+                val fomattedCertifications = certifications.map { certification ->
+                    Certification(itemId = certification.itemId, taskId = certification.taskId, quantity = certification.taskQuantity)
+                }
+                if(certifications.isNotEmpty()) {
+                    db.certificationsDao().insertAll(ArrayList(fomattedCertifications))
+                }
+            }
+        } catch (e: Exception){
+            e.printStackTrace()
+            Log.e(TAG, "error fetching certifications from server ${e.message}")
+            Utilities.showAlert(context, context.getString(R.string.error), context.getString(R.string.error_fetching_remote_certifications))
+        }
+    }
+    // end certifications fetching
 
     // fetch task locations recount
     fun fetchTaskLocationsRecount(context: Context, taskId: Int, forceRemote: Boolean = false){
@@ -340,8 +483,10 @@ class MainRepository {
     private fun fetchLocalTaskLocationsRecount(context: Context, taskId: Int){
         Log.i(TAG, "fetching local task locations recount of $taskId...")
         val db: AppDatabase = AppDatabase.getDatabase(context)
-        db.taskLocationsDao().getAllRecountByTask(taskId).let {
-            currentTaskLocations.postValue(ArrayList(it))
+        db.taskLocationsDao().getAllByTask(taskId).let {
+            var locations = arrayListOf<Location>()
+            locations.addAll(it)
+            currentTaskLocations.postValue(locations)
         }
     }
 
@@ -359,7 +504,7 @@ class MainRepository {
                     tag = HistoryType.LOCATIONS_RECOUNT.toString().plus("-${taskId}"),
                     lastUpdate = System.currentTimeMillis()
                 ))
-                db.taskLocationsDao().deleteAllRecountByTask(taskId)
+                db.taskLocationsDao().deleteAllByTask(taskId)
                 // TODO: Eliminar en el futuro. Aqui se inyecta manualmente el id de la tarea relacionada, esto relentiza
                 locations.forEach { location ->
                     location.taskId = taskId
@@ -368,12 +513,13 @@ class MainRepository {
                 if(locations.isNotEmpty()) {
                     db.taskLocationsDao().insertAll(locations)
                 }
-                val orderedLocationsList = db.taskLocationsDao().getAllRecountByTask(taskId)
-                val orderedLocationsArrayList = arrayListOf<Location>()
-                orderedLocationsArrayList.addAll(orderedLocationsList)
-                currentTaskLocations.postValue(orderedLocationsArrayList)
+                val orderedLocationsList = db.taskLocationsDao().getAllByTask(taskId)
+                val _locations = arrayListOf<Location>()
+                _locations.addAll(orderedLocationsList)
+                currentTaskLocations.postValue(_locations)
             }
         } catch (e: Exception){
+            e.printStackTrace()
             Log.e(TAG, "error al obtener ubicaciones de reconteo del servidor ${e.message}")
             Utilities.showAlert(context, context.getString(R.string.error), context.getString(R.string.error_fetching_remote_locations))
             currentTaskLocations.postValue(null)
@@ -430,6 +576,7 @@ class MainRepository {
                 }
             }
         } catch (e: Exception){
+            e.printStackTrace()
             Log.e(TAG, "error al obtener conteos del servidor ${e.message}")
             Utilities.showAlert(context, context.getString(R.string.error), context.getString(R.string.error_fetching_remote_counts))
             currentTaskLocations.postValue(null)
@@ -500,10 +647,15 @@ class MainRepository {
                     }
                 }
             } catch (e: Exception){
+                e.printStackTrace()
                 Log.e(TAG, "error al obtener items remotos ${e.message}")
                 Utilities.showAlert(context, context.getString(R.string.error), context.getString(R.string.error_fetching_remote_items))
                 itemsLoaded.postValue(null)
             }
         }
+    }
+
+    companion object{
+        private const val TAG = "MAIN_REPOSITORY"
     }
 }

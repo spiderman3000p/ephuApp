@@ -22,9 +22,13 @@ class MainActivityViewModel(application: Application): AndroidViewModel(applicat
     val currentItem: LiveData<Item?> = repository.getCurrentItem()
     var savingCountsWorkProgress: LiveData<List<WorkInfo>> = WorkManager.getInstance(application).getWorkInfosByTagLiveData(
         Constants.SAVING_COUNTS_PROGRESS)
-    var savingEditCountWorkProgress: LiveData<List<WorkInfo>> = WorkManager.getInstance(application).getWorkInfosByTagLiveData(
+    val savingEditCountWorkProgress: LiveData<List<WorkInfo>> = WorkManager.getInstance(application).getWorkInfosByTagLiveData(
         Constants.SAVING_EDIT_COUNT_PROGRESS)
-    var changingTaskStateWorkProgress: LiveData<List<WorkInfo>> = WorkManager.getInstance(application).getWorkInfosByTagLiveData(
+    val changingTaskStateWorkProgress: LiveData<List<WorkInfo>> = WorkManager.getInstance(application).getWorkInfosByTagLiveData(
         Constants.CHANGIN_TASK_STATUS_PROGRESS)
     val device: LiveData<Device?> = repository.getDevice()
+    // certificacion
+    val currentCertificationTaskItems: LiveData<ArrayList<CertificationTaskItem>?> = repository.getCurrentCertificationTaskItems()
+    val pendingCertificationTaskItems: LiveData<ArrayList<CertificationTaskItem>?> = repository.getPendingCertificationTaskItems()
+    val certifiedItems: LiveData<ArrayList<Certification>?> = repository.getCertifiedItems()
 }

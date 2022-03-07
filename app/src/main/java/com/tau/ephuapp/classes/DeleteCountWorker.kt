@@ -23,21 +23,9 @@ class DeleteCountWorker
     (val appContext: Context,
     val workerParams: WorkerParameters
 ) : Worker(appContext, workerParams) {
-    private val TAG = "DELETE_COUNT_WORKER"
-    private val MAX_REINTENT = -1
     private var failedRequestsCounter = 0
-    var db: AppDatabase? = null
 
     override fun doWork(): Result {
-        try {
-            db = AppDatabase.getDatabase(appContext)
-        } catch(ex: SQLiteDatabaseLockedException) {
-            Log.e(TAG, "Database error found", ex)
-        } catch (ex: SQLiteAccessPermException) {
-            Log.e(TAG, "Database error found", ex)
-        } catch (ex: SQLiteCantOpenDatabaseException) {
-            Log.e(TAG, "Database error found", ex)
-        }
         if (inputData.hasKeyWithValueOfType("countJSON", String::class.java)) {
             Log.i(TAG, "conteo recibido con exito")
             val pendingToDeleteCount = Gson().fromJson(inputData.getString("countJSON"), ItemCount::class.java)
@@ -100,5 +88,10 @@ class DeleteCountWorker
         return Result.failure(workDataOf(
                 "error" to appContext.getString(R.string.no_data_received)
         ))
+    }
+
+    companion object{
+        private const val TAG = "DELETE_COUNT_WORKER"
+        private const val MAX_REINTENT = 3
     }
 }

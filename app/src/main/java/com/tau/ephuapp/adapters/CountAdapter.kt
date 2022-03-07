@@ -28,7 +28,6 @@ class CountAdapter(
     private var onDeleteCallback: ((ItemCount, Int) -> Unit)? = _onDeleteCallback
     private var onEditCallback: ((ItemCount, Int) -> Unit)? = _onEditCallback
     //var isEditing = -1
-    val TAG = "COUNT_ADAPTER"
 
     class TaskHolder(val binding: CountCardItemBinding, val onDeleteCallback: ((ItemCount, Int) -> Unit)? = null,
                      onEditCallback: ((ItemCount, Int) -> Unit)? = null): RecyclerView.ViewHolder(binding.root)
@@ -41,21 +40,25 @@ class CountAdapter(
     override fun onBindViewHolder(holder: TaskHolder, position: Int) {
         with(holder){
             with(list[position]){
-                //Log.i(TAG, "onBindViewHolder count: $this")
+                Log.i(TAG, "onBindViewHolder count: $this")
                 if(editing){
-                    //Log.i(TAG, "el conteo $id en la posicion $position esta siendo editado")
+                    Log.i(TAG, "el conteo $id en la posicion $position esta siendo editado")
                     binding.deleteBtn.visibility = View.GONE
-                    binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.editing_count))
+                    binding.itemCard.setCardBackgroundColor(
+                            ContextCompat.getColor(context, R.color.editing_count)
+                    )
                 } else {
                     if(!recount) {
                         binding.deleteBtn.visibility = View.VISIBLE
                     }
                     if(uploaded && dirty) {
-                        //Log.i(TAG, "el conteo $id en la posicion $position ha sido modificado")
-                        binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.teal_201))
+                        Log.i(TAG, "el conteo $id en la posicion $position ha sido modificado")
+                        binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(
+                                context, R.color.teal_201)
+                        )
                     } else {
-                        //Log.i(TAG, "el conteo $id en la posicion $position esta normal")
-                        binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.white))
+                        Log.i(TAG, "el conteo $id en la posicion $position esta normal")
+                        binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.design_default_color_background))
                     }
                 }
                 binding.skuTv.text = sku ?: ""
@@ -151,7 +154,7 @@ class CountAdapter(
                 }
                 binding.itemCard.setOnClickListener {
                     onEditCallback?.let{
-                        //Log.i(TAG, "click realizado en item en la posicion $position: ${list[position]}")
+                        Log.i(TAG, "click realizado en item en la posicion $position: ${list[position]}")
                         if(!editing && (!recount || (recount && !uploaded))){
                             editing = true
                             it(this, position)
@@ -168,5 +171,9 @@ class CountAdapter(
 
     fun getItemAtPosition(position: Int): ItemCount?{
         return list.getOrNull(position)
+    }
+
+    companion object{
+        const val TAG = "COUNT_ADAPTER"
     }
 }

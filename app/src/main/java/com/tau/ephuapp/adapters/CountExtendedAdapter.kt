@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getColorStateList
 import androidx.core.content.ContextCompat.getDrawable
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.color.MaterialColors
 import com.tau.ephuapp.R
 import com.tau.ephuapp.classes.Utilities
 import com.tau.ephuapp.databinding.CountExtendedCardItemBinding
@@ -25,7 +26,6 @@ class CountExtendedAdapter(
     private var context: Context = _context
     private var onDeleteCallback: ((ItemCount, Int) -> Unit)? = _onDeleteCallback
     private var onEditCallback: ((ItemCount, Int) -> Unit)? = _onEditCallback
-    val TAG = "COUNT_ADAPTER"
 
     class TaskHolder(val binding: CountExtendedCardItemBinding, val onDeleteCallback: ((ItemCount, Int) -> Unit)? = null,
                      onEditCallback: ((ItemCount, Int) -> Unit)? = null): RecyclerView.ViewHolder(binding.root)
@@ -40,7 +40,7 @@ class CountExtendedAdapter(
             with(list[position]){
                 if(uploaded) {
                     if(dirty) {
-                        //Log.i(TAG, "el conteo $id en la posicion $position ha sido modificado")
+                        Log.i(TAG, "el conteo $id en la posicion $position ha sido modificado")
                         binding.itemCard.setCardBackgroundColor(
                             ContextCompat.getColor(
                                 context,
@@ -48,16 +48,11 @@ class CountExtendedAdapter(
                             )
                         )
                     } else {
-                        binding.itemCard.setCardBackgroundColor(
-                            ContextCompat.getColor(
-                                context,
-                                R.color.white
-                            )
-                        )
+                        binding.itemCard.setCardBackgroundColor(MaterialColors.getColor(binding.itemCard, R.attr.cardForegroundColor))
                     }
                 } else {
-                    //Log.i(TAG, "el conteo $id en la posicion $position esta normal")
-                    binding.itemCard.setCardBackgroundColor(ContextCompat.getColor(context, R.color.white))
+                    Log.i(TAG, "el conteo $id en la posicion $position esta normal")
+                    binding.itemCard.setCardBackgroundColor(MaterialColors.getColor(binding.itemCard, R.attr.cardForegroundColor))
                 }
                 binding.taskIdTv.text = taskId.toString()
                 binding.skuTv.text = sku ?: ""
@@ -66,7 +61,7 @@ class CountExtendedAdapter(
                 binding.statusBtn.visibility = View.GONE
                 if(hasError == true || (recount && dirty) || uploaded){
                     if(hasError == false && ((recount && dirty) || uploaded)){
-                        if (uploaded && !dirty) {
+                        if (uploaded) {
                             binding.statusBtn.setImageDrawable(
                                 getDrawable(
                                     context,
@@ -137,5 +132,9 @@ class CountExtendedAdapter(
 
     fun getItemList(): List<ItemCount>{
         return list
+    }
+
+    companion object{
+        val TAG = "COUNT_ADAPTER"
     }
 }

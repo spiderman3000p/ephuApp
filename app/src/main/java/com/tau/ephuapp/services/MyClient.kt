@@ -16,7 +16,7 @@ class MyClient {
                     .build()
 
                 retrofit = Retrofit.Builder()
-                    .baseUrl(MySettings.getInstance(context).baseUrl!!)
+                    .baseUrl(MySettings.getInstance(context).getBaseUrl(context))
                     .client(okHttpClient)
                     .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
                     .build()

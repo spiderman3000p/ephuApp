@@ -15,7 +15,6 @@ import com.tau.ephuapp.services.MySettings
 import org.jetbrains.anko.defaultSharedPreferences
 
 class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedPreferenceChangeListener {
-    val TAG = "SETTINGS_FRAGMENT"
     var mRootKey: String? = ""
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         /*AskPasswordDialog.display(parentFragmentManager, { password: String? ->
@@ -86,5 +85,9 @@ class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
                 }
             builder.show()
         }
+    }
+
+    companion object{
+        const val TAG = "SETTINGS_FRAGMENT"
     }
 }

@@ -23,7 +23,6 @@ import org.jetbrains.anko.uiThread
 class CountsFragment : Fragment() {
     private var taskFilterStr: String? = null
     private var filtered: Boolean = false
-    private val TAG = "COUNTS_FRAGMENT"
     private lateinit var viewModel: MainActivityViewModel
     private var mAdapter: CountExtendedAdapter? = null
     private var filteredData = arrayListOf<ItemCount>()
@@ -167,5 +166,9 @@ class CountsFragment : Fragment() {
         filteredData.clear()
         filteredData.addAll(counts)
         mAdapter?.notifyDataSetChanged()
+    }
+
+    companion object{
+        private const val TAG = "COUNTS_FRAGMENT"
     }
 }

@@ -18,70 +18,79 @@ interface ItemCountDao {
     @Query("SELECT * FROM itemcount WHERE localid = :id")
     fun getByLocalId(id: String): ItemCount?
 
-    @Query("SELECT * FROM itemcount")
+    @Query("SELECT * FROM itemcount ORDER BY readTimestamp DESC")
     fun getAll(): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE recount = 1 AND taskid = CAST(:taskId AS NUMERIC) AND locationid = CAST(:locationId AS NUMERIC)")
+    @Query("SELECT * FROM itemcount WHERE recount = 1 AND taskid = CAST(:taskId AS NUMERIC) AND locationid = CAST(:locationId AS NUMERIC) ORDER BY readTimestamp DESC")
     fun getAllRecountByTaskAndLocation(taskId: Int, locationId: Int): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE itemId = CAST(:itemId AS NUMERIC)")
+    @Query("SELECT * FROM itemcount WHERE itemId = CAST(:itemId AS NUMERIC) ORDER BY readTimestamp DESC")
     fun getAllByItem(itemId: Int): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE taskid = CAST(:taskId AS NUMERIC)")
+    @Query("SELECT * FROM itemcount WHERE taskid = CAST(:taskId AS NUMERIC) ORDER BY readTimestamp DESC")
     fun getAllByTask(taskId: Int): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE uploaded = 0")
+    @Query("SELECT * FROM itemcount WHERE uploaded = 0 ORDER BY readTimestamp DESC")
     fun getAllPendingCountsAndRecountsToUpload(): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 0 AND sent = 0")
+    @Query("SELECT * FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 0 ORDER BY readTimestamp DESC")
     fun getAllPendingToUploadByDevice(deviceId: String): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE taskid = :taskId AND uploaded = 0 AND sent = 0")
+    @Query("SELECT * FROM itemcount WHERE taskid = :taskId AND uploaded = 0 ORDER BY readTimestamp DESC")
     fun getAllPendingToUploadByTask(taskId: Int): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE taskid = :taskId AND uploaded = 0 AND sent = 0 AND recount = 1")
+    @Query("SELECT * FROM itemcount WHERE taskid = :taskId AND uploaded = 0 AND recount = 1 ORDER BY readTimestamp DESC")
     fun getAllPendingRecountToUploadByTask(taskId: Int): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 1 AND dirty = 1 AND sent = 0")
+    @Query("SELECT * FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 1 AND dirty = 1 ORDER BY readTimestamp DESC")
     fun getAllPendingToUpdateByDevice(deviceId: String): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 1 AND dirty = 1 AND sent = 0 AND recount = 1")
+    @Query("SELECT * FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 1 AND dirty = 1 AND recount = 1 ORDER BY readTimestamp DESC")
     fun getAllPendingRecountToUpdateByDevice(deviceId: String): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE uploaded = 1 AND dirty = 1")
+    @Query("SELECT * FROM itemcount WHERE uploaded = 1 AND dirty = 1 ORDER BY readTimestamp DESC")
     fun getAllPendingCountsAndRecountsToUpdate(): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE taskid = :taskId AND uploaded = 1 AND dirty = 1 AND sent = 0")
+    @Query("SELECT * FROM itemcount WHERE taskid = :taskId AND uploaded = 1 AND dirty = 1 ORDER BY readTimestamp DESC")
     fun getAllPendingToUpdateByTask(taskId: Int): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE taskid = :taskId AND uploaded = 1 AND dirty = 1 AND sent = 0 AND recount = 1")
+    @Query("SELECT * FROM itemcount WHERE taskid = :taskId AND uploaded = 1 AND dirty = 1 AND recount = 1 ORDER BY readTimestamp DESC")
     fun getAllPendingRecountToUpdateByTask(taskId: Int): List<ItemCount>
+
+    @Query("SELECT * FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 0 OR (uploaded = 1 AND dirty = 1) ORDER BY readTimestamp DESC")
+    fun getAllNotUploadedByDevice(deviceId: String): List<ItemCount>
 
     @Query("SELECT COUNT(*) FROM itemcount WHERE itemId = CAST(:itemId AS NUMERIC)")
     fun countAllByItem(itemId: Int): Int
 
-    @Query("SELECT COUNT(*) FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 0 AND dirty = 1 AND sent = 0")
+    @Query("SELECT COUNT(*) FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 0 OR (uploaded = 1 AND dirty = 1)")
+    fun countAllNotUploadedByDevice(deviceId: String): Int
+
+    @Query("SELECT COUNT(*) FROM itemcount WHERE ephuDeviceId = :deviceId AND (uploaded = 0 OR (uploaded = 1 AND dirty = 1)) AND hasError = 1")
+    fun countAllNotUploadedWithError(deviceId: String): Int
+
+    @Query("SELECT COUNT(*) FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 0 AND dirty = 1")
     fun countAllPendingToUploadByDevice(deviceId: String): Int
 
-    @Query("SELECT COUNT(*) FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 0 AND dirty = 1 AND sent = 0 AND recount = 1")
+    @Query("SELECT COUNT(*) FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 0 AND dirty = 1 AND recount = 1")
     fun countAllPendingRecountToUploadByDevice(deviceId: String): Int
 
-    @Query("SELECT COUNT(*) FROM itemcount WHERE taskid = :taskId AND uploaded = 0 AND dirty = 1 AND sent = 0")
+    @Query("SELECT COUNT(*) FROM itemcount WHERE taskid = :taskId AND uploaded = 0 AND dirty = 1")
     fun countAllPendingToUploadByTask(taskId: Int): Int
 
-    @Query("SELECT COUNT(*) FROM itemcount WHERE taskid = :taskId AND uploaded = 0 AND dirty = 1 AND sent = 0 AND recount = 1")
+    @Query("SELECT COUNT(*) FROM itemcount WHERE taskid = :taskId AND uploaded = 0 AND dirty = 1 AND recount = 1")
     fun countAllPendingRecountToUploadByTask(taskId: Int): Int
 
-    @Query("SELECT COUNT(*) FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 1 AND dirty = 1 AND sent = 0")
+    @Query("SELECT COUNT(*) FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 1 AND dirty = 1")
     fun countAllPendingToUpdateByDevice(deviceId: String): Int
 
-    @Query("SELECT COUNT(*) FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 1 AND dirty = 1 AND sent = 0 AND recount = 1")
+    @Query("SELECT COUNT(*) FROM itemcount WHERE ephudeviceid = :deviceId AND uploaded = 1 AND dirty = 1 AND recount = 1")
     fun countAllPendingRecountToUpdateByDevice(deviceId: String): Int
 
-    @Query("SELECT COUNT(*) FROM itemcount WHERE taskid = :taskId AND uploaded = 1 AND dirty = 1 AND sent = 0")
+    @Query("SELECT COUNT(*) FROM itemcount WHERE taskid = :taskId AND uploaded = 1 AND dirty = 1")
     fun countAllPendingToUpdateByTask(taskId: Int): Int
 
-    @Query("SELECT COUNT(*) FROM itemcount WHERE taskid = :taskId AND uploaded = 1 AND dirty = 1 AND sent = 0 AND recount = 1")
+    @Query("SELECT COUNT(*) FROM itemcount WHERE taskid = :taskId AND uploaded = 1 AND dirty = 1 AND recount = 1")
     fun countAllPendingRecountToUpdateByTask(taskId: Int): Int
 
     @Query("SELECT COUNT(*) FROM itemcount WHERE ephudeviceid = :deviceId")
@@ -114,10 +123,10 @@ interface ItemCountDao {
     @Query("UPDATE itemcount SET dirty = 0, sent = 0 WHERE localId = :localId AND recount = 1")
     fun updateUpdatedRecount(localId: String): Int
 
-    @Query("SELECT * FROM itemcount WHERE localid IN (:ids)")
+    @Query("SELECT * FROM itemcount WHERE localid IN (:ids) ORDER BY readTimestamp DESC")
     fun loadAllByLocalIds(ids: Array<String>): List<ItemCount>
 
-    @Query("SELECT * FROM itemcount WHERE localid IN (:ids) AND recount = 1")
+    @Query("SELECT * FROM itemcount WHERE localid IN (:ids) AND recount = 1 ORDER BY readTimestamp DESC")
     fun loadAllRecountsByLocalIds(ids: Array<String>): List<ItemCount>
 
     @Query("DELETE FROM itemcount WHERE taskId = :taskId")

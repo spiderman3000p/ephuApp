@@ -1,5 +1,6 @@
 package com.tau.ephuapp.classes
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.database.sqlite.SQLiteAccessPermException
 import android.database.sqlite.SQLiteCantOpenDatabaseException
@@ -16,26 +17,14 @@ import com.tau.ephuapp.services.MyDataService
 import com.tau.ephuapp.services.MyClient
 import java.io.IOException
 import java.net.SocketTimeoutException
-
+@SuppressLint("LongLogTag")
 class ChangeLocationIsEmptyWorker
     (val appContext: Context,
     val workerParams: WorkerParameters
 ) : Worker(appContext, workerParams) {
-    private val TAG = "CHANGE_LOCATION_IS_EMPTY_WORKER"
-    private val MAX_REINTENT = -1
     private var failedRequestsCounter = 0
-    var db: AppDatabase? = null
 
     override fun doWork(): Result {
-        try {
-            db = AppDatabase.getDatabase(appContext)
-        } catch(ex: SQLiteDatabaseLockedException) {
-            Log.e(TAG, "Database error found", ex)
-        } catch (ex: SQLiteAccessPermException) {
-            Log.e(TAG, "Database error found", ex)
-        } catch (ex: SQLiteCantOpenDatabaseException) {
-            Log.e(TAG, "Database error found", ex)
-        }
         Log.i(TAG, "input data: $inputData")
         if (inputData.hasKeyWithValueOfType<Int>("taskId") &&
             inputData.hasKeyWithValueOfType<Int>("locationId") &&
@@ -88,5 +77,10 @@ class ChangeLocationIsEmptyWorker
         }
         Log.e(TAG, "No se recibieron los datos necesarios")
         return Result.failure()
+    }
+
+    companion object{
+        private const val TAG = "CHANGE_LOCATION_IS_EMPTY_WORKER"
+        private const val MAX_REINTENT = 3
     }
 }

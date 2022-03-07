@@ -12,5 +12,5 @@ enum class ParameterType{
 data class TaskParameter(
     var taskId: Int,
     var parameterType: ParameterType,
-    var value: Boolean
+    var value: Boolean? = false
 ): Serializable

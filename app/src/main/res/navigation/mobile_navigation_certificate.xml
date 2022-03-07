@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    app:startDestination="@id/navigation_scan">
+
+    <fragment
+        android:id="@+id/navigation_scan"
+        android:name="com.tau.ephuapp.activities.main.ui.certificate.scan.ScanFragment"
+        android:label="@string/title_scan"
+        tools:layout="@layout/fragment_scan" />
+
+    <fragment
+        android:id="@+id/navigation_scanned"
+        android:name="com.tau.ephuapp.activities.main.ui.certificate.scanned.ScannedFragment"
+        android:label="@string/title_scanned"
+        tools:layout="@layout/fragment_list" />
+
+    <fragment
+        android:id="@+id/navigation_resume"
+        android:name="com.tau.ephuapp.activities.main.ui.certificate.resume.ResumeFragment"
+        android:label="@string/title_resume"
+        tools:layout="@layout/fragment_resume" />
+
+    <fragment
+        android:id="@+id/navigation_pending"
+        android:name="com.tau.ephuapp.activities.main.ui.certificate.pending.PendingFragment"
+        android:label="@string/title_pending"
+        tools:layout="@layout/fragment_list" />
+</navigation>

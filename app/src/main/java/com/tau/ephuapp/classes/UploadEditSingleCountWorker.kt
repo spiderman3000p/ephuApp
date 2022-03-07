@@ -1,5 +1,6 @@
 package com.tau.ephuapp.classes
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.database.sqlite.SQLiteAccessPermException
 import android.database.sqlite.SQLiteCantOpenDatabaseException
@@ -21,12 +22,11 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.*
 
+@SuppressLint("LongLogTag")
 class UploadEditSingleCountWorker
     (val appContext: Context,
     val workerParams: WorkerParameters
 ) : Worker(appContext, workerParams) {
-    private val TAG = "UPLOAD_EDIT_SINGLE_COUNT_WORKER"
-    private val MAX_REINTENT = -1
     private var failedRequestsCounter = 0
     var db: AppDatabase? = null
 
@@ -163,8 +163,7 @@ class UploadEditSingleCountWorker
                             TAG,
                             "actualizando details de la ubicacion ${location.locationId}"
                     )
-                    val locationRecounts = Gson().fromJson(location.details, JsonArray::class.java)?.map { jsonEl ->
-                        val itemCount = Gson().fromJson(jsonEl, ItemCount::class.java)
+                    location.details?.map { itemCount ->
                         if(pendingToUploadCount.localId == itemCount.localId) {
                             itemCount.id = pendingToUploadCount.id
                             itemCount.uploaded = true
@@ -175,13 +174,14 @@ class UploadEditSingleCountWorker
                         }
                         itemCount
                     }
-                    if (!locationRecounts.isNullOrEmpty()) {
-                        val details = Gson().toJson(locationRecounts).toString()
-                        db?.taskLocationsDao()
-                                ?.updateDetails(details, location.id)
+                    if (!location.details.isNullOrEmpty()) {
+                        db?.taskLocationsDao()?.deleteAllRecountByTask(taskId, location.id)
+                        var details = arrayListOf<ItemCount>()
+                        details.addAll(location.details!!)
+                        db?.itemCountDao()?.insertAll(details)
                         Log.i(
-                                TAG,
-                                "ubicacion ${location.locationId} actualizada con el details: $details"
+                            TAG,
+                            "ubicacion ${location.locationId} actualizada con el details: ${location.details}"
                         )
                     }
                 }
@@ -190,5 +190,10 @@ class UploadEditSingleCountWorker
         val dataMap = mutableMapOf<String, Int?>()
         dataMap.put(pendingToUploadCount.localId, pendingToUploadCount.id)
         return Data.Builder().putAll(dataMap.toMap()).build()
+    }
+
+    companion object{
+        private const val TAG = "UPLOAD_EDIT_SINGLE_COUNT_WORKER"
+        private const val MAX_REINTENT = 3
     }
 }

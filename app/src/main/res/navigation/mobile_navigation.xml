@@ -19,7 +19,7 @@
 
     <fragment
         android:id="@+id/nav_cert_tasks"
-        android:name="com.tau.ephuapp.activities.main.ui.cert_tasks.CertificationTasksFragment"
+        android:name="com.tau.ephuapp.activities.main.ui.certificate.CertificationTasksFragment"
         android:label="@string/menu_cert_tasks"
         tools:layout="@layout/fragment_cert_tasks" />
 

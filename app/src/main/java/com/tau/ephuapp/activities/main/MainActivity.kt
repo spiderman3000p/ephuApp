@@ -41,7 +41,6 @@ import java.util.concurrent.ExecutionException
 
 
 class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
-    private val TAG = "MAIN_ACTIVITY"
     private lateinit var appBarConfiguration: AppBarConfiguration
     private val viewModel: MainActivityViewModel by viewModels()
     private var device: Device? = null
@@ -131,38 +130,23 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         viewModel.repository.getItemsLoaded().observe(this, {
             Log.i(TAG, "items cargados: $it")
             updateSyncDataInHeader()
+            val deviceId = Utilities.getAndroidId(this)
             doAsync {
+                val pendingCounts = db.itemCountDao().countAllNotUploadedByDevice(deviceId)
+                if (pendingCounts > 0) {//verificar si hay conteos pendientes (actualizaciones y creaciones)
+                    Utilities.showAlert(this@MainActivity, "Error", "Hay conteos pendientes por subir. Se cargaran solo las tareas guardadas en la base de datos local. Por favor, suba los conteos pendientes y luego sincronice las tareas")
+                }
                 val tasksExist = db.fetchedHistoryDao().getByTag(HistoryType.TASKS.toString()) != null
                 Log.i(TAG, "hay tareas cargadas de hoy?: $tasksExist")
                 Log.i(TAG, "hay tareas cargadas en view model?: ${!viewModel.tasksList.value.isNullOrEmpty()}")
-                if (!tasksExist || viewModel.tasksList.value.isNullOrEmpty()) {
+                if (!tasksExist || (viewModel.tasksList.value.isNullOrEmpty() && pendingCounts == 0)) {
                     viewModel.repository.fetchTasksList(this@MainActivity, tasksExist)
+                } else if (!tasksExist || (viewModel.tasksList.value.isNullOrEmpty() && pendingCounts > 0)) {
+                    viewModel.repository.fetchTasksList(this@MainActivity, false)
                 }
             }
         })
-        // provisional TODO: quitar esto de aqui al salir a produccion
-        //WorkManager.getInstance().cancelAllWork()
         MyWorkerManagerService.uploadPendingCounts(this)
-    }
-
-    private fun isWorkScheduled(tag: String): Boolean {
-        val instance = WorkManager.getInstance()
-        val statuses: ListenableFuture<List<WorkInfo>> = instance.getWorkInfosByTag(tag)
-        return try {
-            var running = false
-            val workInfoList: List<WorkInfo> = statuses.get()
-            for (workInfo in workInfoList) {
-                val state = workInfo.state
-                running = state == WorkInfo.State.RUNNING || state == WorkInfo.State.ENQUEUED
-            }
-            running
-        } catch (e: ExecutionException) {
-            e.printStackTrace()
-            false
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
-            false
-        }
     }
 
     private fun updateSyncDataInHeader(){
@@ -192,11 +176,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         // Inflate the menu; this adds items to the action bar if it is present.
         //menuInflater.inflate(R.menu.main, menu)
         return true
-    }
-
-    private fun filterCounts(query: String?) {
-        Log.i(TAG, "filtering planifications")
-
     }
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
@@ -245,5 +224,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         val value = sharedPreferences?.getString(key, "")
         Log.i(TAG, "nuevo valor para $key: $value")
         MySettings.resetValues(this)
+    }
+
+    companion object{
+        private const val TAG = "MAIN_ACTIVITY"
     }
 }

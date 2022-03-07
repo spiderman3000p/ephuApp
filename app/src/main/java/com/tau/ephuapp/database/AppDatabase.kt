@@ -7,19 +7,21 @@ import androidx.room.RoomDatabase
 import com.tau.ephuapp.database.daos.*
 import com.tau.ephuapp.models.*
 
-@Database(entities = [Task::class, PendingToUploadCertification::class, FetchedDataHistory::class,
+@Database(entities = [Task::class, FetchedDataHistory::class,
     Location::class, Device::class, Item::class, ItemCount::class, TaskParameter::class,
-    ItemCountTask::class], version = 1)
+    ItemCountTask::class, DeliveryLine::class, Certification::class, CertificationTaskItem::class], version = 1)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun tasksDao(): TaskDao
     abstract fun tasksParameterDao(): TaskParameterDao
     abstract fun taskLocationsDao(): TaskLocationDao
+    abstract fun certificationTaskItemsDao(): CertificationTaskItemDao
+    abstract fun certificationsDao(): CertificationDao
     abstract fun itemDao(): ItemDao
     abstract fun itemCountDao(): ItemCountDao
     abstract fun itemCountTaskDao(): ItemCountTaskDao
     abstract fun deviceDao(): DeviceDao
-    abstract fun pendingToUploadCertificationDao(): PendingToUploadCertificationDao
     abstract fun fetchedHistoryDao(): FetchedDataHistoryDao
+    abstract fun deliveryLineDao(): DeliveryLineDao
     companion object{
         @Volatile
         private var INSTANCE: AppDatabase? = null
@@ -30,7 +32,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "ephuapp_database"
-                ).build()
+                )
+                .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
+                .build()
                 INSTANCE = instance
                 instance
             }

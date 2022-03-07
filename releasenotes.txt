@@ -1,0 +1,4 @@
+CHANGELOG
+
+- Agregado filtro de tareas en la pantalla de lista de tareas
+- Ajustado Bug en pantalla de escaneo

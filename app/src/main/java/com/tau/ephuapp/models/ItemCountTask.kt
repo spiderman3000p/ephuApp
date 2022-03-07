@@ -16,5 +16,6 @@ data class ItemCountTask(
     var createdDate: String? = null,// null
     var serial: String? = null, // null
     var locationId: Int? = null,
+    var localId: String? = null,
     var editing: Boolean = false
 ): Serializable

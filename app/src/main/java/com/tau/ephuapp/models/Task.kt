@@ -1,5 +1,6 @@
 package com.tau.ephuapp.models
 
+import android.util.Log
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
@@ -13,20 +14,31 @@ enum class TaskType{
 }
 @Entity
 data class Task(
-    @PrimaryKey
+        @PrimaryKey
     var id: Int = 0,
-    var name: String? = null,
-    var taskState: TaskState? = null,
-    var taskType: TaskType? = null,
-    var device: String? = null,
-    var totalTime: Long = 0,
-    var lines: Int? = null,
-    var progress: Int? = 0,
-    var count: Int? = 1,
-    @Ignore
-    var parameters: List<TaskParameter>? = null
+        var name: String? = null,
+        var taskState: TaskState? = null,
+        var taskType: TaskType? = null,
+        var deviceCode: String? = null,
+        var totalTime: Long = 0,
+        var lines: Int? = null,
+        var progress: Int? = 0,
+        var count: Int? = 1,
+        @Ignore
+        var parameters: ArrayList<TaskParameter>? = null,
+        @Ignore
+        var locations: ArrayList<Location>? = null,
+        @Ignore
+        var items: ArrayList<CertificationTaskItem>? = null
 ): Serializable{
     fun initParameters(params: List<TaskParameter>){
-        parameters = params
+        parameters = arrayListOf()
+        parameters?.addAll(params)
+    }
+
+    fun initItems(params: List<CertificationTaskItem>){
+        Log.i("Task Class", "initItems params: $params")
+        items = arrayListOf()
+        items?.addAll(params)
     }
 }

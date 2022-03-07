@@ -40,24 +40,21 @@ interface TaskLocationDao {
     @Query("DELETE FROM location WHERE taskId = CAST(:taskId AS NUMERIC)")
     fun deleteAllByTask(taskId: Int)
 
-    @Query("DELETE FROM location WHERE taskId = CAST(:taskId AS NUMERIC) AND details IS NOT NULL")
-    fun deleteAllRecountByTask(taskId: Int)
+    @Query("DELETE FROM location WHERE taskId = CAST(:taskId AS NUMERIC) AND locationId = CAST(:locationId AS NUMERIC) IS NOT NULL")
+    fun deleteAllRecountByTask(taskId: Int, locationId: Int)
 
     @Query("SELECT * FROM location WHERE id = CAST(:id AS NUMERIC)")
-    fun getById(id: Int): Location
+    fun getById(id: Int): Location?
 
-    @Query("SELECT * FROM itemcount WHERE locationId = CAST(:locationId AS NUMERIC) AND taskId = CAST(:taskId AS NUMERIC)")
+    @Query("SELECT * FROM itemcount WHERE locationId = CAST(:locationId AS NUMERIC) AND taskId = CAST(:taskId AS NUMERIC) ORDER BY readTimestamp DESC")
     fun getLocationCounts(locationId: Int, taskId: Int): List<ItemCount>
 
-    @Query("SELECT details FROM location WHERE id = CAST(:locationId AS NUMERIC) AND taskId = CAST(:taskId AS NUMERIC)")
-    fun getLocationRecounts(locationId: Int, taskId: Int): String?
+    @Query("SELECT * FROM itemcount WHERE locationId = CAST(:locationId AS NUMERIC) AND taskId = CAST(:taskId AS NUMERIC)")
+    fun getLocationRecounts(locationId: Int, taskId: Int): List<ItemCount>
 
-    @Query("SELECT * FROM location WHERE taskId = CAST(:taskId AS NUMERIC) AND details IS NOT NULL  ORDER BY lane, columnAt, height ASC")
-    fun getAllRecountByTask(taskId: Int): List<Location>
+    @Query("SELECT * FROM itemcount WHERE taskId = CAST(:taskId AS NUMERIC)")
+    fun getAllRecountByTask(taskId: Int): List<ItemCount>
 
-    @Query("SELECT COUNT(*) FROM location WHERE taskId = CAST(:taskId AS NUMERIC) AND details IS NOT NULL")
+    @Query("SELECT COUNT(*) FROM itemcount WHERE taskId = CAST(:taskId AS NUMERIC)")
     fun countAllRecountByTask(taskId: Int): Int
-
-    @Query("UPDATE location SET details = :details WHERE id = CAST(:locationId AS NUMERIC)")
-    fun updateDetails(details: String?, locationId: Int?): Int
 }

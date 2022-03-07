@@ -26,14 +26,13 @@ class RecountAdapter(
     _list: ArrayList<ItemCountTask>,
     _context: Context,
     _onDeleteCallback: ((ItemCount, Int) -> Unit)? = null,
-    _onEditCallback: ((ItemCountTask, Int) -> Unit)? = null
+    _onEditCallback: ((ItemCountTask, ItemCount?, Int) -> Unit)? = null
 ) : RecyclerView.Adapter<RecountAdapter.TaskHolder>() {
     private var list: ArrayList<ItemCountTask> = _list
     private var context: Context = _context
     private var onDeleteCallback: ((ItemCount, Int) -> Unit)? = _onDeleteCallback
-    private var onEditCallback: ((ItemCountTask, Int) -> Unit)? = _onEditCallback
+    private var onEditCallback: ((ItemCountTask, ItemCount?, Int) -> Unit)? = _onEditCallback
     private lateinit var db: AppDatabase
-    val TAG = "RECOUNT_ADAPTER"
 
     init {
         try {
@@ -48,7 +47,7 @@ class RecountAdapter(
     }
 
     class TaskHolder(val binding: CountCardItemBinding, val onDeleteCallback: ((ItemCount, Int) -> Unit)? = null,
-                     onEditCallback: ((ItemCountTask, Int) -> Unit)? = null): RecyclerView.ViewHolder(binding.root)
+                     onEditCallback: ((ItemCountTask, ItemCount, Int) -> Unit)? = null): RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskHolder {
         val binding = CountCardItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -80,7 +79,7 @@ class RecountAdapter(
                         binding.itemCard.setCardBackgroundColor(
                             ContextCompat.getColor(
                                 context,
-                                R.color.white
+                                R.color.design_default_color_background
                             )
                         )
                         if(_itemCount != null){
@@ -91,10 +90,10 @@ class RecountAdapter(
                                     binding.deleteBtn.visibility = View.GONE
                                 }
                                 if (_itemCount.uploaded && _itemCount.dirty) {
-                                    /*Log.i(
+                                    Log.i(
                                         TAG,
                                         "el reconteo ${_itemCount.id} en la posicion $position ha sido modificado"
-                                    )*/
+                                    )
                                     binding.itemCard.setCardBackgroundColor(
                                         ContextCompat.getColor(
                                             context,
@@ -116,12 +115,12 @@ class RecountAdapter(
                         binding.descriptionTv.text = item?.description ?: ""
                         binding.itemCard.setOnClickListener {
                             onEditCallback?.let {
-                                /*Log.i(
+                                Log.i(
                                     TAG,
-                                    "click realizado en item en la posicion $position: $itemCountTask"
-                                )*/
-                                if (!itemCountTask.editing && (_itemCount == null || _itemCount?.uploaded == false)) {
-                                    it(itemCountTask, position)
+                                    "click realizado en item en la posicion $position: $_itemCount"
+                                )
+                                if (!itemCountTask.editing && (_itemCount == null || !_itemCount.uploaded)) {
+                                    it(itemCountTask, _itemCount, position)
                                 }
                             }
                         }
@@ -138,7 +137,7 @@ class RecountAdapter(
                                             )
                                         )
                                         if (itemCount.recount) {
-                                            //Log.i(TAG, "el reconteo ${itemCount.id} es un reconteo")
+                                            Log.i(TAG, "el reconteo ${itemCount.id} es un reconteo")
                                             binding.statusBtn.setOnClickListener {
                                                 Utilities.showAlert(
                                                     context,
@@ -147,10 +146,10 @@ class RecountAdapter(
                                                 )
                                             }
                                         } else {
-                                            /*Log.i(
+                                            Log.i(
                                                 TAG,
                                                 "el reconteo ${itemCount.id} no es un reconteo"
-                                            )*/
+                                            )
                                             binding.statusBtn.setOnClickListener {
                                                 Utilities.showAlert(
                                                     context,
@@ -161,10 +160,10 @@ class RecountAdapter(
                                         }
                                         binding.statusBtn.visibility = View.VISIBLE
                                     } else if (itemCount.recount && itemCount.dirty) {
-                                        /*Log.i(
+                                        Log.i(
                                             TAG,
                                             "el reconteo ${itemCount.id} no ha sido subido y es un reconteo modificado"
-                                        )*/
+                                        )
                                         binding.statusBtn.setImageDrawable(
                                             getDrawable(
                                                 context,
@@ -251,5 +250,9 @@ class RecountAdapter(
 
     fun getItemAtPosition(position: Int): ItemCountTask?{
         return list.getOrNull(position)
+    }
+
+    companion object{
+        const val TAG = "RECOUNT_ADAPTER"
     }
 }

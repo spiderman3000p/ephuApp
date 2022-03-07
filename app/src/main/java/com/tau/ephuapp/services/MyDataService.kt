@@ -20,6 +20,12 @@ interface MyDataService {
 
     @GET
     @Headers("Content-Type: application/json")
+    fun getTaskCertifications(
+            @Url url: String
+    ): Call<ArrayList<CertificationTaskItem>>
+
+    @GET
+    @Headers("Content-Type: application/json")
     fun getTaskCounts(
         @Url url: String
     ): Call<ArrayList<ItemCount>>
@@ -41,13 +47,6 @@ interface MyDataService {
     fun uploadFile(
         @Url url: String,
         @Part filePart: MultipartBody.Part
-    ): Call<Void>
-
-    @POST
-    @Headers("Content-Type: application/json")
-    fun saveCount(
-        @Body item: ItemCount,
-        @Url url: String = "contarItemApp"
     ): Call<Void>
 
     @POST
@@ -82,4 +81,12 @@ interface MyDataService {
         @Body counts: List<ItemCount>,
         @Url url: String = "contarItemApp"
     ): Call<List<ItemCount>>
+
+    // certifications
+    @POST
+    @Headers("Content-Type: application/json")
+    fun saveCertification(
+        @Url url: String,
+        @Body certification: Certification
+    ): Call<Void>
 }

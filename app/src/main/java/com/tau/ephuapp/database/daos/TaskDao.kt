@@ -7,10 +7,10 @@ interface TaskDao {
     @Query("SELECT * FROM task")
     fun getAll(): List<Task>
 
-    @Query("SELECT * FROM task WHERE device = :deviceId")
+    @Query("SELECT * FROM task WHERE deviceCode = :deviceId")
     fun getAllByDevice(deviceId: String): List<Task>
 
-    @Query("SELECT COUNT(*) FROM task WHERE device = :deviceId")
+    @Query("SELECT COUNT(*) FROM task WHERE deviceCode = :deviceId")
     fun countAllByDevice(deviceId: String): Int
 
     @Query("SELECT * FROM task WHERE id IN (:ids)")

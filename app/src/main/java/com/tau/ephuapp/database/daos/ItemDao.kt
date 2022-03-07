@@ -37,6 +37,15 @@ interface ItemDao {
     @Query("SELECT * FROM item WHERE id = CAST(:id AS NUMERIC)")
     fun getById(id: Int): Item?
 
+    @Query("SELECT * FROM item WHERE sku = :sku")
+    fun getBySku(sku: String): Item?
+
+    @Query("SELECT * FROM item WHERE ean13 = :ean13")
+    fun getByEan13(ean13: String): Item?
+
+    @Query("SELECT * FROM item WHERE ean13 = :ean14")
+    fun getByEan14(ean14: String): Item?
+
     @Query("SELECT * FROM item WHERE sku = :str OR ean13 = :str OR ean14 = :str LIMIT 1")
     fun search(str: String): Item?
 }

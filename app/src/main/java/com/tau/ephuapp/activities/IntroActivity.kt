@@ -15,7 +15,6 @@ import com.tau.ephuapp.activities.main.MainActivity
 import com.tau.ephuapp.classes.Utilities
 
 class IntroActivity : AppIntro() {
-    private val TAG = "INTRO_ACTIVITY"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         //setContentView(R.layout.activity_intro)
@@ -36,8 +35,7 @@ class IntroActivity : AppIntro() {
         askForPermissions(
             permissions = arrayOf(
                 Manifest.permission.CAMERA,
-                Manifest.permission.READ_PHONE_STATE,
-                //Manifest.permission.WRITE_EXTERNAL_STORAGE
+                Manifest.permission.READ_PHONE_STATE
             ),
             slideNumber = 2,
             required = true)
@@ -77,5 +75,9 @@ class IntroActivity : AppIntro() {
         // User pressed "Deny" + "Don't ask again" on the permission dialog
         Log.i(TAG, "permiso desactivado: $permissionName")
         Utilities.showAlert(this, getString(R.string.warning), getString(R.string.user_disabled_permission_msg))
+    }
+
+    companion object{
+        private const val TAG = "INTRO_ACTIVITY"
     }
 }

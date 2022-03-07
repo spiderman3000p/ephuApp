@@ -1,5 +1,6 @@
 package com.tau.ephuapp.classes
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.database.sqlite.SQLiteAccessPermException
 import android.database.sqlite.SQLiteCantOpenDatabaseException
@@ -18,14 +19,12 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.*
 
-
+@SuppressLint("LongLogTag")
 class UploadMultipleCountsWorker
     (
     val appContext: Context,
     val workerParams: WorkerParameters
 ) : Worker(appContext, workerParams) {
-    private val TAG = "UPLOAD_MULTIPLE_COUNTS_WORKER"
-    private val MAX_REINTENT = 3
     private var failedRequestsCounter = 0
     var db: AppDatabase? = null
 
@@ -122,7 +121,8 @@ class UploadMultipleCountsWorker
                     val dataToReturn = Data.Builder().putAll(dataMap.toMap()).build()
                     return Result.success(dataToReturn)
                 }
-            } catch (toe: SocketTimeoutException) {
+            } catch (toe: SocketTimeoutException)
+            {
                 Log.e(TAG, "Network error when uploading counts", toe)
                 return if (failedRequestsCounter < MAX_REINTENT) {
                     Log.i(TAG, "reintentando enviar conteos...")
@@ -141,7 +141,8 @@ class UploadMultipleCountsWorker
                     }
                     Result.failure(dataToReturn)
                 }
-            } catch (ioEx: IOException) {
+            } catch (ioEx: IOException)
+            {
                 Log.e(
                     TAG,
                     "Network error when uploading counts",
@@ -185,13 +186,13 @@ class UploadMultipleCountsWorker
                 Log.i(TAG, "la tarea es de reconteo")
                 val locationsToUpdate = db?.taskLocationsDao()?.getAllByTask(task.id)
                 Log.i(TAG, "las ubicaciones a actualizar son: $locationsToUpdate")
+                db?.itemCountDao()?.deleteAllByTaskId(taskId)
                 locationsToUpdate?.forEach{location ->
                     Log.i(
                             TAG,
                             "actualizando details de la ubicacion ${location.locationId}"
                     )
-                    val locationRecounts = Gson().fromJson(location.details, JsonArray::class.java)?.map {jsonEl ->
-                        val itemCount = Gson().fromJson(jsonEl, ItemCount::class.java)
+                    val locationRecounts = location.details?.map {itemCount ->
                         val foundUploadedItemCount = pendingToUploadCounts.find {_itemCount ->
                             _itemCount.localId == itemCount.localId
                         }
@@ -206,12 +207,12 @@ class UploadMultipleCountsWorker
                         itemCount
                     }
                     if (!locationRecounts.isNullOrEmpty()) {
-                        val details = Gson().toJson(locationRecounts).toString()
-                        db?.taskLocationsDao()
-                                ?.updateDetails(details, location.id)
+                        val details = arrayListOf<ItemCount>()
+                        details.addAll(location.details!!)
+                        db?.itemCountDao()?.insertAll(details)
                         Log.i(
-                                TAG,
-                                "ubicacion ${location.locationId} actualizada con el details: $details"
+                            TAG,
+                            "ubicacion ${location.locationId} actualizada con el details: ${location.details}"
                         )
                     }
                 }
@@ -222,5 +223,10 @@ class UploadMultipleCountsWorker
             dataMap.put("localId-${it.localId}", Gson().toJson(it))
         }
         return Data.Builder().putAll(dataMap.toMap()).build()
+    }
+
+    companion object{
+        private const val TAG = "UPLOAD_MULTIPLE_COUNTS_WORKER"
+        private const val MAX_REINTENT = 3
     }
 }
